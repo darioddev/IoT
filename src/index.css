@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Estilos específicos para modo oscuro */
+.dark {
+  @apply bg-gray-800 text-white; /* Fondo oscuro y texto blanco */
+}
+
+
+.dark button {
+  @apply bg-gray-700 text-white hover:bg-gray-600; /* Estilo del botón en modo oscuro */
+}
+
+.dark form div div {
+  @apply bg-gray-800 text-white; /* Estilo del input en modo oscuro */
+}
+
+.dark p {
+  @apply text-gray-300; /* Estilo del texto en modo oscuro */
+}
+.dark .error-message {
+  @apply text-red-300; /* Estilo del texto de error en modo oscuro */
+}
+
+.dark input {
+    @apply bg-gray-700 text-white; /* Estilo del input en modo oscuro */
+}
