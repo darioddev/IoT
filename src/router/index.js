@@ -17,7 +17,7 @@ const router = createRouter({
       name: 'login',
       meta: {
         title: 'Inicio de sesion', // Titulo de la pagina
-        requireAuth: true // Indicamos que esta ruta requiere autenticacion
+        requireAuth: true // Requiere autenticacion
       },
       component: () => import('@/views/loginView.vue')
     },
@@ -42,8 +42,9 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   document.title = to.meta.title || 'IoT' // Cambiamos el titulo de la pagina por el que hayamos definido en la ruta de lo contrario ponemos el titulo por defecto
-  const isLogged = await useAuth.getAuth() // Obtenemos el estado de autenticacion
-
+  const isLogged = await useAuth.getAuth() // Obtenemos el estado de autenticacion del usuario
+  console.log(isLogged)
+  next()
 })
 
 export default router

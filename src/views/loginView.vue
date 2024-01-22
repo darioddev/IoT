@@ -2,7 +2,7 @@
 import formComponent from '@/components/forms/formComponent.vue'
 import errorComponent from '@/components/alerts/errorComponent.vue'
 import buttonThemeComponet from '@/components/dashboard/buttonThemeComponet.vue';
-import { useAuth } from '@/stores/auth';
+import { useAuth } from '@/lib/auth.js'
 import { hasEmptyFields } from '@/lib/validations.js'
 import { ref } from 'vue';
 import { useRouter } from 'vue-router'
@@ -36,10 +36,11 @@ const button = {
 const login = async (datos) => {
   try {
     if (hasEmptyFields(datos)) throw new Error('Todos los campos son obligatorios'); // Si hay campos vacíos, lanzo un error
-    const auther = useAuth(); // Obtengo el store de autenticación 
-    await auther.login(datos.mail, datos.password); // Llamo al método login del store de autenticación , si ahi errores se lanza desde el store que es donde se maneja la autenticación
+    console.log(datos.mail, datos.password)
+    await useAuth.login(datos.mail, datos.password); // Llamo al método login del servicio de autenticación
     router.replace({ name: 'home' }); // Redirecciono al home
   } catch (error) {
+    console.log(error)
     errorMessage.value = error.message;  // Si hay errores, muestro el mensaje de error
     showError.value = true; // Muestro el componente de error
   }

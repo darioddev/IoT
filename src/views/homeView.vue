@@ -1,21 +1,19 @@
 <script setup>
 import buttonThemeComponet from '@/components/dashboard/buttonThemeComponet.vue';
 
-import { useAuth } from '@/stores/auth';
+import { useAuth } from '@/lib/auth.js'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue';
-import { espacios } from '@/lib/spaces.js';
+//import { espacios } from '@/lib/spaces.js';
 import { openModal, closeModal } from '@/lib/modal.js';
-import { auth } from '@/lib/firebase.js';
 
 
-const auther = useAuth();
 const router = useRouter()
 const isDarkMode = ref(document.querySelector('html').classList.contains('dark'));
 
 const newSpaceName = ref(''); // Variable reactiva para el nombre del nuevo espacio 
-const newSpaceSensors = ref([]); // Variable reactiva para los sensores del nuevo espacio
-const newSpaceExecutors = ref([]); // Variable reactiva para los ejecutores del nuevo espacio
+//const newSpaceSensors = ref([]); // Variable reactiva para los sensores del nuevo espacio
+//const newSpaceExecutors = ref([]); // Variable reactiva para los ejecutores del nuevo espacio
 
 const newSpaceNameError = ref(false); // Variable reactiva para el error del nombre del nuevo espacio
 const spaces = ref([]); // Variable reactiva para los espacios del usuario
@@ -90,7 +88,7 @@ const executors = [
 const logout = async () => {
     try {
         if (confirm('¿Estás seguro de cerrar sesión?')) {
-            await auther.logout();
+            await useAuth.logout();
             router.replace({ name: 'login' });
         }
     } catch (error) {
@@ -103,7 +101,6 @@ const createSpace = async () => {
     try {
         if (newSpaceName.value === '') throw new Error('El nombre del espacio no puede estar vacío');
         spaces.value.push({ name: newSpaceName.value, sensores: {}, ejecutores: {} });
-        await espacios.updateDocument(auther.id, { space: spaces.value })
         closeModal();
     } catch (error) {
         newSpaceNameError.value = true;
@@ -117,9 +114,7 @@ const toggleTheme = () => {
 
 const getSpaces = async () => {
     try {
-        const { space } = await espacios.getDocument(auther.id);
-        space.map(el => spaces.value.push(el))
-
+        //
     } catch (error) {
         console.log(error)
     }

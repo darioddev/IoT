@@ -13,7 +13,7 @@ const { text, inputs, button, link, toLink } = defineProps([
 
 const inputsValue = reactive(Object.fromEntries(inputs.map(input => [input.id, '']))); // Creo un objeto con los valores de los inputs recibidos por props
 const emit = defineEmits(['action']) // Defino el evento que se emitirá al hacer submit
-const action = () =>  emit('action', inputsValue) // Función que se ejecutará al hacer submit
+const action = () => emit('action', inputsValue) // Función que se ejecutará al hacer submit
 
 </script>
 
@@ -27,12 +27,8 @@ const action = () =>  emit('action', inputsValue) // Función que se ejecutará 
                     </p>
                     <!-- Recorro todos los inputs -->
                     <div v-for="input in inputs" :key="input.id">
-                        <inputComponent 
-                        :id="input.id" 
-                        :placeholder="input.placeholder" 
-                        :type="input.type"
-                        :value="inputsValue[input.id]" 
-                        @updateValue="val => inputsValue[input.id] = val"/>
+                        <inputComponent :id="input.id" :placeholder="input.placeholder" :type="input.type"
+                            :value="inputsValue[input.id]" @updateValue="val => inputsValue[input.id] = val" />
                     </div>
                     <buttonComponent :text="button.text" :class="button.class" :type="button.type" />
                     <!-- Creo un hiperenlace para registro -->
@@ -40,6 +36,7 @@ const action = () =>  emit('action', inputsValue) // Función que se ejecutará 
                         <RouterLink :to="link" class="hover:underline hover: text-gray-400">
                             {{ toLink }}
                         </RouterLink>
+
                     </div>
                 </div>
             </div>
