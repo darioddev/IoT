@@ -3,10 +3,10 @@ import { User } from '../lib/crud.js'
 
 export const useAuth = defineStore('auth', {
   state: () => ({
-    id: '',
-    username: '',
-    mail: '',
-    isLogged: false
+    id: localStorage.getItem('id') || '',
+    username: localStorage.getItem('username') || '',
+    mail: localStorage.getItem('mail') || '',
+    isLogged: localStorage.getItem('isLogged') || false
   }),
 
   actions: {
@@ -29,12 +29,20 @@ export const useAuth = defineStore('auth', {
       this.setUsername(username)
       this.setMail(mail)
       this.setLogged(true)
+
+      // Guardamos los datos en el localStorage
+      localStorage.setItem('id', id)
+      localStorage.setItem('username', username)
+      localStorage.setItem('mail', mail)
+      localStorage.setItem('isLogged', true)
     },
-    reset() {
-      this.id = ''
-      this.username = ''
-      this.mail = ''
-      this.setLogged(false)
+    getAuth() {
+      return {
+        id: this.id,
+        username: this.username,
+        mail: this.mail,
+        isLogged: this.isLogged
+      }
     },
     async login(username, password) {
       try {
@@ -54,11 +62,23 @@ export const useAuth = defineStore('auth', {
     },
     async logout() {
       try {
+        // Eliminamos los datos del localStorage
+        localStorage.removeItem('id')
+        localStorage.removeItem('username')
+        localStorage.removeItem('mail')
+        localStorage.removeItem('isLogged')
+        
         await User.logout()
         this.reset()
       } catch (error) {
         throw new Error(error.message)
       }
+    },
+    reset() {
+      this.id = ''
+      this.username = ''
+      this.mail = ''
+      this.setLogged(false)
     }
   }
 })

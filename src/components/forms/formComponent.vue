@@ -11,11 +11,9 @@ const { text, inputs, button, link, toLink } = defineProps([
     'toLink',
 ])
 
-const inputsValue = reactive(Object.fromEntries(inputs.map(input => [input.id, ''])));
-
+const inputsValue = reactive(Object.fromEntries(inputs.map(input => [input.id, '']))); // Creo un objeto con los valores de los inputs recibidos por props
 const emit = defineEmits(['action']) // Defino el evento que se emitirá al hacer submit
 const action = () =>  emit('action', inputsValue) // Función que se ejecutará al hacer submit
-
 
 </script>
 

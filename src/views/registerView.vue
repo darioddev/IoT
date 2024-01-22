@@ -1,7 +1,7 @@
 <script setup>
 import formComponent from '@/components/forms/formComponent.vue';
 import errorComponent from '@/components/alerts/errorComponent.vue';
-import buttonThemeComponet from '@/components/buttonThemeComponet.vue';
+import buttonThemeComponet from '@/components/dashboard/buttonThemeComponet.vue';
 import { hasEmptyFields, isSamePassword } from '@/lib/validations.js';
 import { useAuth } from '@/stores/auth';
 
@@ -57,7 +57,7 @@ const register = async (datos) => {
 
         const auth = useAuth();
         await auth.register(datos);
-        router.replace({ name: 'home' });
+        router.replace({ name: 'login' });
     } catch (error) {
         showError.value = true;
         errorMessage.value = error.message;

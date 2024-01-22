@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuth } from '@/stores/auth.js'
+import { useAuth } from '@/lib/auth.js'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -16,7 +16,8 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       meta: {
-        title: 'Inicio de sesion'
+        title: 'Inicio de sesion', // Titulo de la pagina
+        requireAuth: true // Indicamos que esta ruta requiere autenticacion
       },
       component: () => import('@/views/loginView.vue')
     },
@@ -39,12 +40,10 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach((to, from, next) => {
-  document.title = to.meta.title || 'Vue'
-  // Compruebo mediante el store si el usuario esta logueado
-  const auth = useAuth()
-  if (auth.isLogged && (to.name === 'login' || to.name === 'registro')) next({ name: 'home' })
-  else next()
+router.beforeEach(async (to, from, next) => {
+  document.title = to.meta.title || 'IoT' // Cambiamos el titulo de la pagina por el que hayamos definido en la ruta de lo contrario ponemos el titulo por defecto
+  const isLogged = await useAuth.getAuth() // Obtenemos el estado de autenticacion
+
 })
 
 export default router

@@ -9,7 +9,8 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  updateDoc
+  updateDoc,
+  setDoc
 } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase-firestore.js'
 import {
   getAuth,
@@ -36,7 +37,7 @@ const firebaseConfig = {
 //Conectamos con la base de datos
 const app = initializeApp(firebaseConfig)
 const db = getFirestore(app)
-const auth = getAuth(app)
+export const auth = getAuth(app)
 //CRUD
 
 export const saveData = (ref, objeto) => addDoc(collection(db, ref), objeto)
@@ -46,11 +47,12 @@ export const getDataCollection = (ref) => getDocs(collection(db, ref))
 export const getDataChanged_collection = (ref, callBack) =>
   onSnapshot(collection(db, ref), callBack)
 //Sobre un documento
-export const getDataChanged_document = (ref, document, callBack) =>
-  onSnapshot(doc(db, ref, document), callBack)
+export const getDataChanged_document = (ref, document, callBack) => onSnapshot(doc(db, ref, document), callBack)
 export const deleteData = (id, ref) => deleteDoc(doc(db, ref, id))
 export const getData = (id, ref) => getDoc(doc(db, ref, id))
 export const updateData = (id, ref, objeto) => updateDoc(doc(db, ref, id), objeto)
+
+// Obtener un documento por id
 
 
 // Métodos de autenticación
@@ -65,3 +67,7 @@ export const signOutUser = () => signOut(auth)
 export const onAuthStateChangedUser = (callBack) => onAuthStateChanged(auth, callBack)
 
 export const signInWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvider())
+
+/* Metodo que permite guardar un doucmento con el id que pongamos*/
+export const saveDataWithId = (ref, id, objeto) => setDoc(doc(db, ref, id), objeto)
+
