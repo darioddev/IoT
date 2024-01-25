@@ -8,7 +8,7 @@ const router = createRouter({
       path: '/',
       name: 'home',
       meta: {
-        title: 'Home'
+        title: 'Home',
       },
       component: () => import('@/views/homeView.vue')
     },
@@ -16,8 +16,7 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       meta: {
-        title: 'Inicio de sesion', // Titulo de la pagina
-        requireAuth: true // Requiere autenticacion
+        title: 'Inicio de sesion' // Titulo de la pagina
       },
       component: () => import('@/views/loginView.vue')
     },
@@ -28,6 +27,15 @@ const router = createRouter({
         title: 'Registro'
       },
       component: () => import('@/views/registerView.vue')
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      meta: {
+        title: 'Dashboard',
+        requireAuth: true // Requiere autenticación
+      },
+      component: () => import('@/views/dashboardView.vue')
     },
     {
       path: '/:pathMatch(.*)*',
@@ -41,10 +49,12 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-  document.title = to.meta.title || 'IoT' // Cambiamos el titulo de la pagina por el que hayamos definido en la ruta de lo contrario ponemos el titulo por defecto
-  const isLogged = await useAuth.getAuth() // Obtenemos el estado de autenticacion del usuario
-  console.log(isLogged)
-  next()
+  document.title = to.meta.title || 'IoT'
+  const isLogged = await useAuth.isAuthenticated() // Obtenemos si el usuario está autenticado
+  const requireAuth = to.matched.some((record) => record.meta.requireAuth) // Obtenemos si la ruta requiere autenticación
+  if(requireAuth && !isLogged) next({ name: 'home' }) // Si la ruta requiere autenticación y el usuario no está autenticado lo redirigimos al home
+  else if(!requireAuth && isLogged) next({ name: 'dashboard' }) // Si la ruta no requiere autenticación y el usuario está autenticado lo redirigimos al home
+  else next() // Si no , lo dejamos pasar
 })
 
 export default router

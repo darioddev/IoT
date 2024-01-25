@@ -11,3 +11,6 @@ app.use(createPinia())
 app.use(router)
 
 app.mount('#app')
+
+// Tema en base a lo que el usuario tenga en el localStorage
+document.querySelector('html').classList.add('dark')

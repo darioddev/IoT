@@ -9,11 +9,8 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-
 const showError = ref(false)
 const errorMessage = ref('')
-const isDarkMode = ref(document.querySelector('html').classList.contains('dark'));
-
 const inputs = [
   {
     id: 'mail',
@@ -36,9 +33,8 @@ const button = {
 const login = async (datos) => {
   try {
     if (hasEmptyFields(datos)) throw new Error('Todos los campos son obligatorios'); // Si hay campos vacíos, lanzo un error
-    console.log(datos.mail, datos.password)
-    await useAuth.login(datos.mail, datos.password); // Llamo al método login del servicio de autenticación
-    router.replace({ name: 'home' }); // Redirecciono al home
+    await useAuth.login(datos); // Llamo al método login del servicio de autenticación
+    router.replace({ name: 'dashboard' }); // Redirecciono al home
   } catch (error) {
     console.log(error)
     errorMessage.value = error.message;  // Si hay errores, muestro el mensaje de error
@@ -46,19 +42,12 @@ const login = async (datos) => {
   }
 }
 
-const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value;
-  document.querySelector('html').classList.toggle('dark');
-}
-
-
 
 </script>
 
 <template>
-  <main>
-    <buttonThemeComponet class="fixed top-4 right-4 p-2 bg-gray-200 rounded-full" @toggleTheme="toggleTheme"
-      :isDarkMode="isDarkMode" />
+  <main cl>
+    <buttonThemeComponet class="fixed top-4 right-4 p-2 bg-gray-200 rounded-full" />
     <div v-if="showError" class="flex flex-col items-center justify-center">
       <errorComponent :error="errorMessage" />
     </div>

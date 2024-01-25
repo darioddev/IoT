@@ -3,14 +3,13 @@ import formComponent from '@/components/forms/formComponent.vue';
 import errorComponent from '@/components/alerts/errorComponent.vue';
 import buttonThemeComponet from '@/components/dashboard/buttonThemeComponet.vue';
 import { hasEmptyFields, isSamePassword } from '@/lib/validations.js';
-import { useAuth } from '@/stores/auth';
-
+import { useAuth } from '@/lib/auth.js';
 import { ref } from 'vue'; // Importo ref para crear variables reactivas
 import { useRouter } from 'vue-router' //Importo router para redireccionar
+
 const router = useRouter()
 const showError = ref(false);
 const errorMessage = ref('');
-const isDarkMode = ref(document.querySelector('html').classList.contains('dark'));
 
 const inputs = [
     {
@@ -42,10 +41,6 @@ const button = {
     type: 'submit',
 }
 
-const toggleTheme = () => {
-    isDarkMode.value = !isDarkMode.value;
-    document.querySelector('html').classList.toggle('dark');
-}
 
 const register = async (datos) => {
     try {
@@ -55,8 +50,7 @@ const register = async (datos) => {
         if (!isSamePassword(datos.password, datos.password_confirmation))
             throw new Error('Las contraseñas no coinciden');
 
-        const auth = useAuth();
-        await auth.register(datos);
+        await useAuth.register(datos);
         router.replace({ name: 'login' });
     } catch (error) {
         showError.value = true;
@@ -67,8 +61,7 @@ const register = async (datos) => {
 
 <template>
     <!-- Botón para cambiar el tema -->
-    <buttonThemeComponet class="fixed top-4 right-4 p-2 bg-gray-200 rounded-full" @toggleTheme="toggleTheme"
-        :isDarkMode="isDarkMode" />
+    <buttonThemeComponet class="fixed top-4 right-4 p-2 bg-gray-200 rounded-full" />
     <div v-if="showError" class="flex flex-col items-center justify-center">
         <errorComponent :error="errorMessage" />
     </div>

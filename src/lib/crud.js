@@ -10,8 +10,7 @@ export const User = {
    */
   async getUser(username, password) {
     try {
-      const user = await signInUserCredentials(username, password) // Llamamos a la funcion de firebase que nos permite loguearnos
-      return user
+      await signInUserCredentials(username, password) // Llamamos a la funcion de firebase que nos permite loguearnos
     } catch (error) {
       if (error.code === 'auth/user-not-found')
         throw new Error('El usuario no existe') // Mensaje en caso de que el usuario no exista

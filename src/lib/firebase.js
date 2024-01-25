@@ -35,9 +35,9 @@ const firebaseConfig = {
 }
 
 //Conectamos con la base de datos
-const app = initializeApp(firebaseConfig)
+const app = initializeApp(firebaseConfig) 
 const db = getFirestore(app)
-export const auth = getAuth(app)
+export const auth = getAuth(app) // Obtenemos la autenticación de Firebase
 //CRUD
 
 export const saveData = (ref, objeto) => addDoc(collection(db, ref), objeto)
@@ -59,10 +59,13 @@ export const updateData = (id, ref, objeto) => updateDoc(doc(db, ref, id), objet
 export const createUserCredentials = (email, password , displayName) =>
   createUserWithEmailAndPassword(auth, email, password , displayName)
 
+// Método para iniciar sesión con correo y contraseña
 export const signInUserCredentials = (email, password) =>
   signInWithEmailAndPassword(auth, email, password)
 
+// Método para cerrar sesión
 export const signOutUser = () => signOut(auth)
+
 
 export const onAuthStateChangedUser = (callBack) => onAuthStateChanged(auth, callBack)
 

@@ -29,5 +29,6 @@ export const espacios = {
   async updateDocument(id, data) {
     return await updateData(id, this.name, data)
   },
+
 }
 
