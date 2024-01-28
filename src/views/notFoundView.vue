@@ -1,5 +1,4 @@
 <script setup>
-    //Se crea una vista 404 no encontrado muy estilada con tailwind
 </script>
 
 <template>

@@ -21,23 +21,29 @@ const showDetails = ref([]); // Variable reactiva para mostrar los detalles del 
 
 const newSpaceName = ref(''); // Variable reactiva para el nombre del nuevo espacio 
 const newSpaceSensors = ref({ // Variable reactiva para los sensores del nuevo espacio
-    name: '',
-    unit: '',
-    value: ''
+    name: '', // Nombre del sensor
+    unit: '', // Unidad de medida del sensor
+    value: '' // Valor del sensor
 });
 const newSpaceExecutors = ref({ // Variable reactiva para los ejecutores del nuevo espacio
-    name: '',
-    executor: '',
-    state: ''
+    name: '', // Nombre del ejecutor
+    executor: '', // Dispositivo del ejecutor
+    state: '' // Estado del ejecutor
 });
 
 const isOpenModals = ref({  // Variable reactiva para mostrar el modal
-    id: -1,
-    sensor: false,
-    executor: false,
-    addSpace: false,
-    message: '',
+    id: -1, // Variable reactiva para controlar el id del espacio
+    sensor: false, // Variable reactiva para mostrar el modal de añadir un nuevo sensor
+    executor: false, // Variable reactiva para mostrar el modal de añadir un nuevo ejecutor
+    addSpace: false, // Variable reactiva para mostrar el modal de añadir un nuevo espacio
+    message: '', // Variable reactiva para mostrar un mensaje de error
+    editSpace: false, // Variable reactiva para mostrar el modal de editar un espacio
+    loading: { // Variable reactiva para mostrar el loader en los modales 
+        load: false,
+        message: 'Cargando...'
+    }
 });
+
 
 const resetModal = () => {
     isOpenModals.value.id = -1; // Me aseguro de que el id del espacio sea -1
@@ -47,21 +53,21 @@ const resetModal = () => {
 }
 
 const closeModal = () => {
-    isOpenModals.value = {
+    isOpenModals.value = { // Reseteo los valores del modal
         id: -1,
         sensor: false,
         executor: false,
         addSpace: false,
         message: '',
-        values: {}
+        loading: { load: false, message: 'Cargando...' }
     }
-    resetModal();
+    resetModal(); // Reseteo los valores del modal
 }
 
-const closeModalComponent = (object) => {
+const closeModalComponent = (object) => { // Reseteo los campos cuando se agregan nuevos sensores o ejecutores
     if (object !== undefined && object !== null) {
         Object.keys(object).forEach(key => {
-            if (key !== 'id') object[key] = '';
+            if (key !== 'id') object[key] = ''; // En caso de que el objeto tenga un id no lo reseteo
         })
     }
     closeModal();
@@ -86,6 +92,9 @@ const createSpace = async () => {
         if (hasEmptyFields(newSpaceSensors.value) || hasEmptyFields(newSpaceExecutors.value)) { // Si algun campo esta vacio lanza un error
             throw new Error('Debes añadir al menos un sensor y un ejecutor');
         }
+        isOpenModals.value.message = ''; // Reseteo el mensaje de error
+        isOpenModals.value.loading = { load: true, message: 'Añadiendo espacio...' };
+        await new Promise((resolve) => setTimeout(resolve, 300));
 
         spaces.push({ id: generateUUID(), name: newSpaceName.value, sensores: sensor, ejecutores: executor }); // Añado el nuevo espacio al array de espacios
         await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo espacio
@@ -97,8 +106,14 @@ const createSpace = async () => {
 };
 
 //Añado un nuevo sensor o ejecutor
-const addItem = async (data) => {
+const addItem = async (datos) => {
     try {
+        //Manipulamos el objeto data para que tenga el formato correcto
+        //Si es sensor nos quedamos solo con sus parametros y si es ejecutor nos quedamos con sus parametros
+        const data = isOpenModals.value.sensor ?
+            { id: generateUUID(), name: datos.name, unit: datos.unit, value: datos.value } :
+            { id: generateUUID(), name: datos.name, executor: datos.executor, state: datos.state };
+        console.log(datos)
         if (isOpenModals.value.id === -1) throw new Error('Debes seleccionar un espacio'); // Si no se selecciono un espacio lanza un error
         if (hasEmptyFields(data)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
         const index = espacios.findSpaceIndex(spaces, isOpenModals.value.id); // Busco el indice del espacio en el array de espacios en base al id
@@ -109,27 +124,34 @@ const addItem = async (data) => {
         // Si el tipo de entidad es un ejecutor y ya existe un ejecutor con ese nombre lanza un error
         if (isOpenModals.value.executor && espacios.isExistExecutor(spaces, isOpenModals.value.id, data.name)) throw new Error(`Ya existe un ejecutor con el nombre : ${data.name}`);
 
-        if (isOpenModals.value.sensor) spaces[index].sensores.push({ ...data }); // Si el tipo de entidad es un sensor , añado el nuevo sensor al array de sensores del espacio
-        if (isOpenModals.value.executor) spaces[index].ejecutores.push({ ...data }); // Si el tipo de entidad es un ejecutor , añado el nuevo ejecutor al array de ejecutores del espacio
+        if (isOpenModals.value.sensor) {
+            spaces[index].sensores.push({ ...data }); // Si el tipo de entidad es un sensor , añado el nuevo sensor al array de sensores del espacio
+            isOpenModals.value.loading = { load: true, message: 'Añadiendo sensor...' };
+        }
+        if (isOpenModals.value.executor) {
+            spaces[index].ejecutores.push({ ...data }); // Si el tipo de entidad es un ejecutor , añado el nuevo ejecutor al array de ejecutores del espacio
+            isOpenModals.value.loading = { load: true, message: 'Añadiendo ejecutor...' };
+        }
+        // Simular un retraso para demostrar el cargador
+        await new Promise((resolve) => setTimeout(resolve, 300));
         await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
-        closeModalComponent(data); // Cierro el modal
+        closeModalComponent(datos); // Cierro el modal
     } catch (error) {
-        console.error(error)
         isOpenModals.value.message = error.message;
     }
 };
 
-//Modifico un sensor o ejecutor
-const updateItem = async (idSpace, idSensor) => {
-    try {
-        const sensor = espacios.findSensor(spaces, idSpace, idSensor);
-        newSpaceSensors.value.name = sensor.data.name;
-        OpenModal('sensor');
+const showInformationSensor = (idSpace, idSensor) => {
+    const sensor = espacios.findSensor(spaces, idSpace, idSensor) // Busco el sensor en el array de sensores en base al id
+    newSpaceSensors.value = { ...sensor.data }; // Asigno los valores del sensor a la variable reactiva
+    OpenModal('editSpace'); // Abro el modal de editar espacio
+};
 
-    } catch (error) {
-        console.error(error)
-        isOpenModals.value.message = error.message;
-    }
+//Funcion que muestra la informacion del ejecutor
+const showInformationExecutor = (idSpace, idExecutor) => {
+    const executor = espacios.findExecutor(spaces, idSpace, idExecutor) // Busco el ejecutor en el array de ejecutores en base al id
+    newSpaceExecutors.value = { ...executor.data }; // Asigno los valores del ejecutor a la variable reactiva
+    OpenModal('editSpace'); // Abro el modal de editar espacio
 };
 
 //Elimino un espacio 
@@ -138,7 +160,7 @@ const deleteSpace = async (idSpace) => {
         const index = espacios.findSpaceIndex(spaces, idSpace); // Busco el indice del espacio en el array de espacios en base al id
         if (confirm(`¿Estás seguro de eliminar el espacio ${spaces[index].name}?`)) {
             spaces.splice(index, 1); // Elimino el espacio del array de espacios 
-            //await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
+            await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
             closeModal(); // Cierro el modal
         }
     } catch (error) {
@@ -178,6 +200,65 @@ const deleteExecutor = async (idSpace, idExecutor) => {
         }
     } catch (error) {
         console.error(error) // Si hay un error lo muestro por consola
+    }
+};
+
+const updateExecutor = async (data) => {
+    try {
+        if (hasEmptyFields(data)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
+        //Primero de todo comprobaremos si el nombre nuevo del ejecutor es igual al que ya tenia
+        //Si es igual no habra problema y se actualizara el ejecutor
+        //Si es distinto comprobaremos si ya existe un ejecutor con ese nombre
+        //Si existe un ejecutor con ese nombre lanzaremos un error
+        const { indexSpace, executorIndex } = espacios.findExecutor(spaces, isOpenModals.value.id, data.id); // Busco el ejecutor en el array de ejecutores en base al id
+        if (data.name !== spaces[indexSpace].ejecutores[executorIndex].name) { // Si el nombre del ejecutor es distinto al que ya tenia
+            if (espacios.isExistExecutor(spaces, isOpenModals.value.id, data.name)) { // Si el nombre del ejecutor ya existe lanza un error
+                throw new Error(`Ya existe un ejecutor con el nombre : ${data.name}`); // Muestro un mensaje de error
+            }
+        }
+        // Mostrar cargador antes de cerrar el modal
+        isOpenModals.value.loading.load = { load: true, message: 'Actualizando ejecutor...' }
+        // Simular un retraso para demostrar el cargador
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        spaces[indexSpace].ejecutores[executorIndex] = { ...data }; // Actualizo el ejecutor en el array de ejecutores
+        await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios        
+
+        closeModal(); // Cierro el modal
+    } catch (error) {
+        isOpenModals.value.message = error.message; // Muestro un mensaje de error
+    }
+}
+
+const updateSensor = async (data) => {
+    try {
+        if (hasEmptyFields(data)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
+        //Primero de todo comprobaremos si el nombre nuevo del sensor es igual al que ya tenia
+        //Si es igual no habra problema y se actualizara el sensor
+        //Si es distinto comprobaremos si ya existe un sensor con ese nombre
+        //Si existe un sensor con ese nombre lanzaremos un error
+        const { indexSpace, sensorIndex } = espacios.findSensor(spaces, isOpenModals.value.id, data.id); // Busco el sensor en el array de sensores en base al id
+        if (data.name !== spaces[indexSpace].sensores[sensorIndex].name) { // Si el nombre del sensor es distinto al que ya tenia
+            if (espacios.isExistSensor(spaces, isOpenModals.value.id, data.name)) { // Si el nombre del sensor ya existe lanza un error
+                throw new Error(`Ya existe un sensor con el nombre : ${data.name}`); // Muestro un mensaje de error
+            }
+        }
+        // Mostrar cargador antes de cerrar el modal
+        isOpenModals.value.loading = { load: true, message: 'Actualizando sensor...' };
+        // Simular un retraso para demostrar el cargador
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        spaces[indexSpace].sensores[sensorIndex] = { ...data }; // Actualizo el sensor en el array de sensores
+        await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
+        closeModal(); // Cierro el modal
+    } catch (error) {
+        isOpenModals.value.message = error.message; // Muestro un mensaje de error
+    }
+};
+
+const handleSubmitFunction = (data) => {
+    if (!newSpaceSensors.value.name.trim()) {
+        updateExecutor(data);
+    } else {
+        updateSensor(data);
     }
 };
 
@@ -238,7 +319,6 @@ onBeforeMount(async () => {
 </script>
 
 <template>
-    <!-- Navegación Component -->
     <nav
         class="fixed inset-x-0 top-0 z-10 w-full px-4 py-1 bg-white shadow-md border-slate-500 transition duration-700 ease-out">
         <div class="flex justify-between p-4">
@@ -246,12 +326,10 @@ onBeforeMount(async () => {
                 Bienvenido a <span class="text-blue-700">IoT</span>
             </div>
             <div class="flex items-center space-x-4 text-lg font-semibold tracking-tight">
-                <!-- Espacios -->
                 <div>
                     <button
                         class="flex items-center px-6 py-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
                         type="button" @click="OpenModal('addSpace')">
-                        <!-- Icono de plus-->
                         <svg class="w-6 h-6 text-black mx-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="{2}"
@@ -276,25 +354,19 @@ onBeforeMount(async () => {
 
             </div>
         </div>
-
     </nav>
-
-    <!-- Contenido principal -->
     <main class="flex flex-col items-center justify-center w-full h-screen bg-gray-100 ">
         <buttonThemeComponet class="fixed top-6 right-4 p-2 bg-gray-200 rounded-full mt-20" />
         <div v-if="isLoading"
             class="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-white opacity-75">
             <p class="text-2xl font-bold text-gray-500">Cargando...</p>
         </div>
-        <!-- Parrafo donde dice ningun espacio -->
         <div v-if="spaces.length === 0 && !isLoading">
             <div class="flex flex-col items-center justify-center w-full h-full">
                 <p class="text-2xl font-bold text-gray-500 ">No tienes ningún espacio</p>
-                <!-- Boton que hace para crear un nuevo espacio -->
                 <button
                     class="flex items-center px-6 py-2 mt-4 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
                     type="button" @click="OpenModal('addSpace')">
-                    <!-- Icono de plus-->
                     <svg class="w-6 h-6 text-black mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="{2}"
@@ -305,27 +377,20 @@ onBeforeMount(async () => {
                 </button>
             </div>
         </div>
-        <!-- Espacios -->
-        <div v-else-if="!isLoading && spaces.length !== 0" class="flex flex-col items-start justify-start h-screen pt-20 w-full">
+        <div v-else-if="!isLoading && spaces.length !== 0"
+            class="flex flex-col items-start justify-start h-screen pt-20 w-full">
             <div class="w-full ">
                 <div class="p-4">
-                    <!-- Texto "TUS ESPACIOS" en la parte superior izquierda con padding -->
                     <p class="text-3xl font-bold text-gray-500">Tus espacios</p>
                 </div>
-                <!-- Contenedor en columnas -->
                 <div class="flex flex-col justify-center w-ful mx-4">
                     <div v-for="(space, id) in spaces" :key="space.name" class="mx-1">
                         <div class="w-full flex rounded-t-lg bg-blue-700 mt-1">
-                            <!-- El div centra margen entre la pantalla y fondo blanco pero ocupara todo lo largo -->
                             <div>
-                                <p class="text-2xl font-bold text-white p-2">{{ space.name.trim() }} </p>
-                                <!-- div que sera en fila para el numero de sensores y ejecutores tendra icono -->
+                                <p class="text-2xl font-bold text-white p-2">{{ space.name.trim().toLowerCase() }} </p>
                                 <div class="flex items-center p-1  containerDevice">
-                                    <!-- Parrafo para el numero de sensores -->
                                     <p class="text-base font-bold text-white mx-1 underline">Sensores: {{
                                         space.sensores.length }}</p>
-
-                                    <!-- Parrafo para el numero de ejecutores -->
                                     <p class="text-base font-bold text-white mx-1 underline">Ejecutores: {{
                                         space.ejecutores.length }}</p>
                                 </div>
@@ -346,13 +411,10 @@ onBeforeMount(async () => {
                                 </svg>
                             </div>
                         </div>
-
                         <div v-if="showDetails[space.name]">
                             <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
                                 <p class="text-2xl font-bold text-gray-500">Sensores</p>
-
                             </div>
-                            <!-- Div que contendra el nombre del sensor , unidad de medida y valor -->
                             <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
                                 <!--Tabla con encabezado -->
                                 <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
@@ -365,7 +427,6 @@ onBeforeMount(async () => {
                                     <div class="w-1/3">
                                         <p class="text-base font-bold text-white mx-1 ">Valor</p>
                                     </div>
-                                    <!--Contenedor adiccional para las acciones-->
                                     <div class="w-1/3">
                                         <p class="text-base font-bold text-white mx-1 "></p>
                                     </div>
@@ -383,18 +444,17 @@ onBeforeMount(async () => {
                                 <div class="w-1/3 pl-2">
                                     <p class="text-base font-medium text-white "> {{ sensor.value }}</p>
                                 </div>
-                                <!--Contenedor adiccional para las acciones-->
                                 <div class="w-1/3">
                                     <div class="flex flex-row item-center justify-end p-1 mr-20">
                                         <button
                                             class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                            type="button" @click="updateItem(space.id, sensor.id)">
+                                            type="button"
+                                            @click="showInformationSensor(space.id, sensor.id); isOpenModals.id = space.id">
                                             <i class='bx bxs-rename'></i>
                                         </button>
                                         <button
                                             class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
                                             type="button" @click="deleteSensor(space.id, sensor.id)">
-                                            <!--Icono de basura con boxicon i -->
                                             <i class='bx bxs-trash'></i>
                                         </button>
                                     </div>
@@ -404,9 +464,7 @@ onBeforeMount(async () => {
                                 <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
                                     <p class="text-2xl font-bold text-gray-500 ">Ejecutores</p>
                                 </div>
-                                <!-- Div que contendra el nombre del sensor , unidad de medida y valor -->
                                 <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
-                                    <!--Tabla con encabezado -->
                                     <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
                                         <div class="w-1/3">
                                             <p class="text-base font-bold text-white mx-1 ">Nombre</p>
@@ -417,7 +475,6 @@ onBeforeMount(async () => {
                                         <div class="w-1/3">
                                             <p class="text-base font-bold text-white mx-1 ">Estado</p>
                                         </div>
-                                        <!--Contenedor adiccional para las acciones-->
                                         <div class="w-1/3">
                                             <p class="text-base font-bold text-white mx-1 "></p>
                                         </div>
@@ -435,12 +492,12 @@ onBeforeMount(async () => {
                                     <div class="w-1/3 pl-2">
                                         <p class="text-base font-medium text-white "> {{ ejecutor.state }}</p>
                                     </div>
-                                    <!--Contenedor adiccional para las acciones-->
                                     <div class="w-1/3">
                                         <div class="flex flex-row item-center justify-end p-1 mr-20">
                                             <button
                                                 class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                                type="button" @click="updateItem(space.id, sensor.id)">
+                                                type="button"
+                                                @click="showInformationExecutor(space.id, ejecutor.id); isOpenModals.id = space.id">
                                                 <i class='bx bxs-rename'></i>
                                             </button>
                                             <button
@@ -453,20 +510,18 @@ onBeforeMount(async () => {
                                     </div>
                                 </div>
                             </div>
-
                             <div>
-                                <!--Botones de añadir sensor , añadir ejecutor , eliminar espacio -->
                                 <div class="flex flex-row bg-blue-700 rounded-b-lg p-3">
                                     <button
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
                                         type="button" @click="OpenModal('sensor', space.id)" :id="id">
-                                        <i class='bx bx-devices bx-sm'></i>
+                                        <i class='bx bx-radar bx-sm'></i>
                                         Añadir un nuevo sensor
                                     </button>
                                     <button
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
                                         type="button" @click="OpenModal('executor', space.id)">
-                                        <i class='bx bx-radar bx-sm'></i>
+                                        <i class='bx bx-devices bx-sm'></i>
                                         Añadir un nuevo ejecutor
                                     </button>
                                     <button
@@ -482,26 +537,34 @@ onBeforeMount(async () => {
                 </div>
             </div>
         </div>
-        <!-- Modal para añadir sensores -->
-        <modalComponent :head="'Añadir un nuevo sensor'" :name="'sensor'" :placeholder="'Nombre del sensor'"
-            :elements="units" :value="isOpenModals.sensor" @closeModal="closeModalComponent" @handleSubmit="addItem"
-            :messageError="isOpenModals.message" />
-        <!-- Modal para añadir ejecutores -->
-        <modalComponent :head="'Añadir un nuevo ejecutor'" :name="'executor'" :placeholder="'Nombre del ejecutor'"
-            :elements="executors" :state="[{ name: 'Activo', value: 1 }, { name: 'Inactivo', value: 0 }]"
-            :value="isOpenModals.executor" @closeModal="closeModalComponent" @handleSubmit="addItem"
-            :messageError="isOpenModals.message" />
-        <!-- Modal para mdoificar -->
+        <!--Componente 
+        Modal para añadir un nuevo sensor o ejecutor a un espacio
+        -->
+        <modalComponent :head="`Añadir un nuevo ${isOpenModals.sensor ? 'sensor' : 'ejecutor'}`"
+            :name="isOpenModals.sensor ? 'sensor' : 'executor'"
+            :placeholder="isOpenModals.sensor ? 'Nombre del sensor' : 'Nombre del ejecutor'"
+            :elements="isOpenModals.sensor ? units : executors"
+            :state="isOpenModals.executor ? [{ name: 'Activo', value: 1 }, { name: 'Inactivo', value: 0 }] : []"
+            :value="isOpenModals[isOpenModals.sensor ? 'sensor' : 'executor']" @closeModal="closeModalComponent"
+            @handleSubmit="addItem" :messageError="isOpenModals.message" :isLoading="isOpenModals.loading"
+            :initialData="isOpenModals.sensor ? newSpaceSensors : newSpaceExecutors" />
+        <!--
+        Modal para editar un espacio
+        -->
+        <modalComponent :head="`Modificar ${!newSpaceSensors.name.trim() ? 'ejecutor' : 'sensor'} ${newSpaceSensors.name}`"
+            :name="!newSpaceSensors.name.trim() ? 'ejecutor' : 'sensor'"
+            :placeholder="`Nombre del ${!newSpaceSensors.name.trim() ? 'ejecutor' : 'sensor'}`"
+            :elements="!newSpaceSensors.name.trim() ? executors : units"
+            :state="!newSpaceSensors.name.trim() ? [{ name: 'Activo', value: 1 }, { name: 'Inactivo', value: 0 }] : []"
+            :value="isOpenModals.editSpace" @closeModal="closeModalComponent" @handleSubmit="handleSubmitFunction"
+            :messageError="isOpenModals.message" :isLoading="isOpenModals.loading"
+            :initialData="!newSpaceSensors.name.trim() ? newSpaceExecutors : newSpaceSensors" />
 
-
-        <!-- Modal para añadir un nuevo espacio -->
         <div id="crud-modal" tabindex="-1" aria-hidden="true"
             class="flex overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
             v-if="isOpenModals.addSpace">
             <div class="relative p-4 w-full max-w-md max-h-full">
-                <!-- Modal content -->
                 <div class="relative bg-white rounded-lg shadow " id="modal">
-                    <!-- Modal header -->
                     <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t ">
                         <h3 class="text-lg font-semibold text-gray-900 ">
                             Crear un nuevo espacio
@@ -517,11 +580,9 @@ onBeforeMount(async () => {
                             <span class="sr-only">Close modal</span>
                         </button>
                     </div>
-                    <!-- Modal body -->
                     <form class="p-4 md:p-5" @submit.prevent="createSpace">
                         <div class="grid gap-4 mb-4 grid-cols-2">
                             <div class="col-span-2">
-                                <!-- Mensaje en caso de que este vacio  -->
                                 <p class="text-sm font-bold text-red-600 flex" v-if="isOpenModals.message !== ''">
                                     <svg xmlns="http://www.w3.org/2000/svg" x="20px" y="0px" width="25" height="25"
                                         viewBox="0 0 48 48" class="pb-1">
@@ -537,12 +598,22 @@ onBeforeMount(async () => {
                                     </svg>
                                     {{ isOpenModals.message }}
                                 </p>
+                                <p class="text-sm font-bold text-blue-600 flex" v-if="isOpenModals.loading.load">
+                                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600"
+                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z">
+                                        </path>
+                                    </svg>
+                                    {{ isOpenModals.loading.message }}
+                                </p>
                                 <label for="name" class="block mb-2 text-sm font-medwium text-gray-900 ">Name <span
                                         class="text-red-500">*</span></label>
                                 <input type="text" name="name" id="name"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 "
                                     placeholder="Nombre del espacio" v-model="newSpaceName">
-                                <!-- Sensores con su nombre y su unidad de medida mediante un select-->
                                 <label for="sensor" class="block mb-2 text-sm font-medium text-gray-900 p-1">Sensor</label>
                                 <div class="col-span-2 flex items-center justify-between">
                                     <input type="text" name="sensor" id="sensor"
@@ -550,14 +621,12 @@ onBeforeMount(async () => {
                                         placeholder="Nombre del sensor" v-model="newSpaceSensors.name">
                                     <selectComponent name="unit" :elementos="units" @change="handleSelect" />
                                 </div>
-                                <!-- Contenedor para el valor de la unidad -->
                                 <div class="col-span-2 flex items-center justify-between pt-2">
                                     <input type="text" name="value" id="value"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 "
                                         placeholder="Valor de la unidad" v-model="newSpaceSensors.value">
 
                                 </div>
-                                <!-- Ejecutores con su nombre y su icono mediante un select-->
                                 <label for="executor"
                                     class="block mb-2 text-sm font-medium text-gray-900 p-1">Ejecutor</label>
                                 <div class="col-span-2 flex items-center">

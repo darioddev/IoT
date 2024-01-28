@@ -67,7 +67,6 @@ const register = async (datos) => {
     </div>
     <formComponent text="Registrarse en IoT" :inputs="inputs" :button="button" link="/login"
         toLink="¿Ya tienes cuenta? ¡Inicia sesión ahora!" @action="register" />
-    <!-- Opciones con estios tailwind -->
 </template>
 
 

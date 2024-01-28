@@ -41,42 +41,43 @@ export const espacios = {
    * Obtiene el espacio de la lista de espacios con el id
    */
   findSpaceIndex: (spaces, id) => spaces.findIndex((space) => space.id === id),
-  isExistSensor(spaces, id, name) {
-    const index = this.findSpaceIndex(spaces, id)
-    if (index === -1) throw new Error('No se ha encontrado el espacio')
-    return spaces[index].sensores.some(
+
+  isExistSensor(spaces, id, name) { // Buscamos si existe un sensor con el mismo nombre en el espacio
+    const index = this.findSpaceIndex(spaces, id) // Obtenemos el índice del espacio 
+    if (index === -1) throw new Error('No se ha encontrado el espacio') // Si no se encuentra el espacio, lanzamos un error
+    return spaces[index].sensores.some( // Buscamos si existe un sensor con el mismo nombre en el espacio 
       (sensor) => sensor.name.trim().toUpperCase() === name.trim().toUpperCase()
     )
   },
-  isExistExecutor(spaces, id, name) {
-    const index = this.findSpaceIndex(spaces, id)
-    if (index === -1) throw new Error('No se ha encontrado el espacio')
-    return spaces[index].ejecutores.some(
+  isExistExecutor(spaces, id, name) { // Buscamos si existe un ejecutor con el mismo nombre en el espacio
+    const index = this.findSpaceIndex(spaces, id) // Obtenemos el índice del espacio
+    if (index === -1) throw new Error('No se ha encontrado el espacio') // Si no se encuentra el espacio, lanzamos un error
+    return spaces[index].ejecutores.some( // Buscamos si existe un ejecutor con el mismo nombre en el espacio
       (executor) => executor.name.trim().toUpperCase() === name.trim().toUpperCase()
     )
   },
-  isExistSpace(spaces, name) {
+  isExistSpace(spaces, name) { // Buscamos si existe un espacio con el mismo nombre
     return spaces.some((space) => space.name.trim().toUpperCase() === name.trim().toUpperCase())
   },
-  findSensor: (spaces, idSpace, idSensor) => {
-    const index = espacios.findSpaceIndex(spaces, idSpace)
-    if (index === -1) throw new Error('No se ha encontrado el espacio')
-    const sensorIndex = spaces[index].sensores.findIndex((sensor) => sensor.id === idSensor)
-    if (sensorIndex === -1) throw new Error('No se ha encontrado el sensor')
-    return {
+  findSensor: (spaces, idSpace, idSensor) => { // Buscamos un sensor en un espacio
+    const index = espacios.findSpaceIndex(spaces, idSpace) // Obtenemos el índice del espacio
+    if (index === -1) throw new Error('No se ha encontrado el espacio') // Si no se encuentra el espacio, lanzamos un error
+    const sensorIndex = spaces[index].sensores.findIndex((sensor) => sensor.id === idSensor) // Obtenemos el índice del sensor
+    if (sensorIndex === -1) throw new Error('No se ha encontrado el sensor') // Si no se encuentra el sensor, lanzamos un error
+    return { // Devolvemos el sensor y el índice del espacio y del sensor
       data: spaces[index].sensores[sensorIndex],
       indexSpace: index,
       sensorIndex
     }
   },
-  findExecutor(spaces, idSpace, idExecutor) {
-    const index = espacios.findSpaceIndex(spaces, idSpace)
-    if (index === -1) throw new Error('No se ha encontrado el espacio')
-    const executorIndex = spaces[index].ejecutores.findIndex(
+  findExecutor(spaces, idSpace, idExecutor) { // Buscamos un ejecutor en un espacio
+    const index = espacios.findSpaceIndex(spaces, idSpace) // Obtenemos el índice del espacio
+    if (index === -1) throw new Error('No se ha encontrado el espacio') // Si no se encuentra el espacio, lanzamos un error
+    const executorIndex = spaces[index].ejecutores.findIndex( // Obtenemos el índice del ejecutor
       (executor) => executor.id === idExecutor
     )
-    if (executorIndex === -1) throw new Error('No se ha encontrado el ejecutor')
-    return {
+    if (executorIndex === -1) throw new Error('No se ha encontrado el ejecutor') // Si no se encuentra el ejecutor, lanzamos un error
+    return { // Devolvemos el ejecutor y el índice del espacio y del ejecutor
       data: spaces[index].ejecutores[executorIndex],
       indexSpace: index,
       executorIndex
