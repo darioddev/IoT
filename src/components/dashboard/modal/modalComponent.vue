@@ -146,7 +146,7 @@ watch(() => props.initialData, (newInitalData) => {
                             </template>
                             <template v-else>
                                 <selectComponent :name="props.name" :elementos="props.state" @change="handleState"
-                                    :selectedValue="object.state" :text="'Estado del ejecutor'" />
+                                    :selectedValue="object.state || 'Activo'" :text="'Estado del ejecutor'" />
                             </template>
                         </div>
                     </div>

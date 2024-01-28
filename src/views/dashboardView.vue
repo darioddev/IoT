@@ -113,7 +113,6 @@ const addItem = async (datos) => {
         const data = isOpenModals.value.sensor ?
             { id: generateUUID(), name: datos.name, unit: datos.unit, value: datos.value } :
             { id: generateUUID(), name: datos.name, executor: datos.executor, state: datos.state };
-        console.log(datos)
         if (isOpenModals.value.id === -1) throw new Error('Debes seleccionar un espacio'); // Si no se selecciono un espacio lanza un error
         if (hasEmptyFields(data)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
         const index = espacios.findSpaceIndex(spaces, isOpenModals.value.id); // Busco el indice del espacio en el array de espacios en base al id
@@ -638,7 +637,9 @@ onBeforeMount(async () => {
                                 <div class="col-span-2 flex items-center justify-between pt-2">
                                     <selectComponent name="stateExecutor" id="stateExecutor"
                                         :elementos="[{ name: 'Activo', value: 1 }, { name: 'Inactivo', value: 0 }]"
-                                        text="Estado del ejecutor" @change="handleSelect" />
+                                        text="Estado del ejecutor" @change="handleSelect" 
+                                        :selectedValue="'Activo'"
+                                        />
                                 </div>
                             </div>
                         </div>
