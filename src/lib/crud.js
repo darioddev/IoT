@@ -1,4 +1,8 @@
-import { createUserCredentials, signInUserCredentials, signOutUser } from './firebase.js'
+import {
+  createUserCredentials,
+  signInUserCredentials,
+  signOutUser,
+} from './firebase.js'
 import { espacios } from './spaces.js'
 
 export const User = {
@@ -15,13 +19,10 @@ export const User = {
       if (error.code === 'auth/user-not-found')
         throw new Error('El usuario no existe') // Mensaje en caso de que el usuario no exista
       else if (error.code === 'auth/invalid-login-credentials')
-        throw new Error(
-          'Credenciales incorrectas'
-        ) //Mensaje en caso de que no sean las credenciales correctas
-      else if (error.code === 'auth/wrong-password')
-        throw new Error(
-          'Contraseña incorrecta'
-        ) // Mensaje en caso de que la contraseña sea incorrecta
+        throw new Error('Credenciales incorrectas')
+      //Mensaje en caso de que no sean las credenciales correctas
+      else if (error.code === 'auth/wrong-password') throw new Error('Contraseña incorrecta')
+      // Mensaje en caso de que la contraseña sea incorrecta
       else throw new Error('Algo ha ido mal') // Mensaje en caso de que haya un error
     }
   },
@@ -33,9 +34,10 @@ export const User = {
   async saveUser(user) {
     try {
       // Llamamos a la funcion de firebase que nos permite crear un usuario y obtenemos el uid del usuario mediante destructuring
-      const { user: { uid } } = await createUserCredentials(user.mail, user.password, user.username)
-      await espacios.createDocument({ id: uid, spaces: [] }) // Creamos un documento en la coleccion de espacios con el id del usuario
-      await espacios.updateDocument(uid , {spaces : []}) // Actualizamos el documento de la coleccion de espacios con el id del usuario
+      const {
+        user: { uid }
+      } = await createUserCredentials(user.mail, user.password, user.username)
+      await espacios.createDocument({ id: uid, space: [] }) // Creamos un documento en la coleccion de espacios con el id del usuario
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') throw new Error('El correo ya está en uso')
       else if (error.code === 'auth/invalid-email') throw new Error('El correo no es válido')

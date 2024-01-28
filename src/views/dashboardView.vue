@@ -12,6 +12,7 @@ import { devices } from '@/lib/devices.js'
 
 let id;
 const router = useRouter() // Variable router para redireccionar
+const isLoading = ref(false); // Variable reactiva para mostrar el loader
 
 const spaces = reactive([]); // Variable reactiva para los espacios del usuario
 const units = reactive([]) // Variable para las unidades de medida
@@ -37,18 +38,6 @@ const isOpenModals = ref({  // Variable reactiva para mostrar el modal
     addSpace: false,
     message: '',
 });
-
-const propdsModal = ref({
-    head: '',
-    name: '',
-    placeholder: '',
-    elements: [],
-    state: [],
-    value: false,
-    messageError: '',
-    initialValues: {}
-})
-
 
 const resetModal = () => {
     isOpenModals.value.id = -1; // Me aseguro de que el id del espacio sea -1
@@ -215,25 +204,33 @@ const logout = async () => {
 
 // Antes de montar el componente obtengo los datos del usuario y los espacios que tiene
 onBeforeMount(async () => {
-    const { uid } = await useAuth.getAuth();
-    id = uid;
+    isLoading.value = true; // Muestro el loader
+    try {
+        const { uid } = await useAuth.getAuth();
+        id = uid;
 
-    const getUnits = async () => {
-        const unitsData = await devices.getUnits();
-        unitsData.map(unit => units.push(unit))
-    }
-    const getExecutors = async () => {
-        const executorsData = await devices.getExecutors();
-        executorsData.forEach(executor => executors.push(executor))
-    }
-    const getSpaces = async () => {
-        const { space } = await espacios.getDocument(uid);
-        space.forEach(space => spaces.push(space))
-    }
+        const getUnits = async () => {
+            const unitsData = await devices.getUnits();
+            unitsData.map(unit => units.push(unit))
+        }
+        const getExecutors = async () => {
+            const executorsData = await devices.getExecutors();
+            executorsData.forEach(executor => executors.push(executor))
+        }
+        const getSpaces = async () => {
+            const { space } = await espacios.getDocument(uid);
+            space.forEach(space => spaces.push(space))
+        }
 
-    await getSpaces();
-    await getUnits();
-    await getExecutors();
+        await getSpaces();
+        await getUnits();
+        await getExecutors();
+    } catch (error) {
+        console.error(error) // Si hay un error lo muestro por consola
+    } finally {
+        isLoading.value = false; // Oculto el loader
+
+    }
 })
 
 
@@ -285,8 +282,12 @@ onBeforeMount(async () => {
     <!-- Contenido principal -->
     <main class="flex flex-col items-center justify-center w-full h-screen bg-gray-100 ">
         <buttonThemeComponet class="fixed top-6 right-4 p-2 bg-gray-200 rounded-full mt-20" />
+        <div v-if="isLoading"
+            class="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-white opacity-75">
+            <p class="text-2xl font-bold text-gray-500">Cargando...</p>
+        </div>
         <!-- Parrafo donde dice ningun espacio -->
-        <div v-if="spaces.length === 0">
+        <div v-if="spaces.length === 0 && !isLoading">
             <div class="flex flex-col items-center justify-center w-full h-full">
                 <p class="text-2xl font-bold text-gray-500 ">No tienes ningún espacio</p>
                 <!-- Boton que hace para crear un nuevo espacio -->
@@ -305,7 +306,7 @@ onBeforeMount(async () => {
             </div>
         </div>
         <!-- Espacios -->
-        <div v-else class="flex flex-col items-start justify-start h-screen pt-20 w-full">
+        <div v-else-if="!isLoading && spaces.length !== 0" class="flex flex-col items-start justify-start h-screen pt-20 w-full">
             <div class="w-full ">
                 <div class="p-4">
                     <!-- Texto "TUS ESPACIOS" en la parte superior izquierda con padding -->
@@ -347,7 +348,7 @@ onBeforeMount(async () => {
                         </div>
 
                         <div v-if="showDetails[space.name]">
-                            <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content" >
+                            <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
                                 <p class="text-2xl font-bold text-gray-500">Sensores</p>
 
                             </div>
@@ -628,6 +629,7 @@ button:hover {
         @apply hidden
     }
 }
+
 .dark .content {
     @apply bg-[#1f2731]
 }

@@ -74,3 +74,4 @@ export const signInWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvid
 /* Metodo que permite guardar un doucmento con el id que pongamos*/
 export const saveDataWithId = (ref, id, objeto) => setDoc(doc(db, ref, id), objeto)
 
+

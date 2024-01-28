@@ -8,11 +8,12 @@ export const espacios = {
    */
   async createDocument(data) {
     try {
-      return saveDataWithId(this.name, data.id)
+       return await saveDataWithId(this.name, data.id , data)
     } catch (error) {
       throw new Error(error)
     }
   },
+  
   /**
    * Obtiene los datos del documento de la colección de espacios con el id del usuario
    */
