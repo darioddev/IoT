@@ -9,7 +9,7 @@ dotenv.config()
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: 'https://darioddev.github.io/IoT',
+  base : '/IoT',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
