@@ -34,7 +34,8 @@ export const User = {
     try {
       // Llamamos a la funcion de firebase que nos permite crear un usuario y obtenemos el uid del usuario mediante destructuring
       const { user: { uid } } = await createUserCredentials(user.mail, user.password, user.username)
-      await espacios.createDocument({ id: uid, espacios: [] }) // Creamos un documento en la coleccion de espacios con el id del usuario
+      await espacios.createDocument({ id: uid, spaces: [] }) // Creamos un documento en la coleccion de espacios con el id del usuario
+      await espacios.updateDocument(uid , {spaces : []}) // Actualizamos el documento de la coleccion de espacios con el id del usuario
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') throw new Error('El correo ya está en uso')
       else if (error.code === 'auth/invalid-email') throw new Error('El correo no es válido')

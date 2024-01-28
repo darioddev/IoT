@@ -40,7 +40,11 @@ export const useAuth = {
    * @returns {Object | null} Objeto con los datos del usuario actual o null si no hay ninguno
    */
   async getAuth() {
-    return await auth.currentUser || null // Obtenemos el usuario actual , si no hay ninguno devuelve null
+    try {
+      return await auth.currentUser || null // Obtenemos el usuario actual , si no hay ninguno devuelve null
+    } catch (error) {
+      throw new Error('Error al obtener el usuario actual') // Si hay un error lo mostramos
+    }
   },
 
   /**

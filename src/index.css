@@ -2,12 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-
 /* Estilos específicos para modo oscuro */
 .dark {
   @apply bg-gray-800 text-white; /* Fondo oscuro y texto blanco */
 }
-
 
 .dark button {
   @apply bg-gray-700 text-white hover:bg-gray-600; /* Estilo del botón en modo oscuro */
@@ -25,6 +23,23 @@
 }
 
 .dark input {
-    @apply bg-gray-700 text-white; /* Estilo del input en modo oscuro */
+  @apply bg-gray-700 text-white; /* Estilo del input en modo oscuro */
 }
 
+.dark #modal,
+.dark #modal div {
+  @apply bg-[#0c1015];
+}
+
+.dark input {
+  @apply bg-[#0c1015];
+}
+
+.dark select {
+    @apply bg-[#0c1015];
+    @apply text-white;
+}
+
+.dark svg, .dark h3, .dark label {
+    @apply text-white
+}

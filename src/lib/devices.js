@@ -29,5 +29,6 @@ export const devices = {
   handleSelect: (object, tipo, event) => {
     const selectedOption = event.target.selectedOptions[0].value // Obtengo el valor del select a medida que se va seleccionando
     object[tipo] = selectedOption // Asigno el valor del select a la variable reactiva
-  }
+  },
+  
 }

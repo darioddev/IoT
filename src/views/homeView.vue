@@ -7,10 +7,10 @@ const typedText = ref(null);
 
 
 onMounted(() => {
-    setInterval(animateText, 100); 
+    setInterval(animateText, 100);
 });
 
-function animateText() {
+const animateText = () => {
     if (typedText.value) {
         const targetText = 'IoT - Devices';
         const currentText = typedText.value.textContent || '';
@@ -56,6 +56,7 @@ function animateText() {
 .dark #main {
     @apply bg-[#0c1015]
 }
+
 .dark h1 {
     @apply text-white
 }
