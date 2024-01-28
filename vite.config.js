@@ -8,10 +8,8 @@ dotenv.config()
 //Cargar variables de entorno desde el archivo .env
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-  ],
-  base: process.env.BASE_URL || '',
+  plugins: [vue()],
+  base: 'https://darioddev.github.io/IoT',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
