@@ -1,14 +1,13 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue';
 
-const isDarkMode = ref(localStorage.getItem('dark') === 'true');
+const isDarkMode = ref(document.querySelector('html').classList.contains('dark'));
 
 const toggleTheme = () => {
     isDarkMode.value = !isDarkMode.value;
 }
 
 watch(isDarkMode, (newValue) => {
-    localStorage.setItem('dark', newValue);
     document.documentElement.classList.toggle('dark', newValue);
 });
 
