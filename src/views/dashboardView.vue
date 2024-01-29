@@ -9,7 +9,7 @@ import { ref, reactive, onBeforeMount } from 'vue';
 import { hasEmptyFields, generateUUID } from '@/lib/validations.js';
 import { espacios } from '@/lib/spaces.js';
 import { devices } from '@/lib/devices.js'
-import { getDataChanged_document , auth } from '@/lib/firebase.js';
+import { getDataChanged_document, auth } from '@/lib/firebase.js';
 
 const id = ref(auth.currentUser.uid)
 
@@ -410,102 +410,114 @@ onBeforeMount(async () => {
                             </div>
                         </div>
                         <div v-if="showDetails[space.name]">
-                            <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
-                                <p class="text-2xl font-bold text-gray-500">Sensores</p>
-                            </div>
-                            <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
-                                <!--Tabla con encabezado -->
-                                <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
-                                    <div class="w-1/3">
-                                        <p class="text-base font-bold text-white mx-1 ">Nombre</p>
-                                    </div>
-                                    <div class="w-1/3">
-                                        <p class="text-base font-bold text-white mx-1">Unidad de medida</p>
-                                    </div>
-                                    <div class="w-1/3">
-                                        <p class="text-base font-bold text-white mx-1 ">Valor</p>
-                                    </div>
-                                    <div class="w-1/3">
-                                        <p class="text-base font-bold text-white mx-1 "></p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-for="(sensor, index) in space.sensores " :key="sensor.id" class="w-full flex flex-row bg-blue-600 rounder-lg
-                                pl-8
-                                ">
-                                <div class="w-1/3">
-                                    <p class="text-base font-medium text-white"> {{ index + 1 }} - {{ sensor.name }}</p>
-                                </div>
-                                <div class="w-1/3 pl-2">
-                                    <p class="text-base font-medium text-white"> {{ sensor.unit }}</p>
-                                </div>
-                                <div class="w-1/3 pl-2">
-                                    <p class="text-base font-medium text-white "> {{ sensor.value }}</p>
-                                </div>
-                                <div class="w-1/3">
-                                    <div class="flex flex-row item-center justify-end p-1 mr-20">
-                                        <button
-                                            class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                            type="button"
-                                            @click="showInformationSensor(space.id, sensor.id); isOpenModals.id = space.id">
-                                            <i class='bx bxs-rename'></i>
-                                        </button>
-                                        <button
-                                            class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
-                                            type="button" @click="deleteSensor(space.id, sensor.id)">
-                                            <i class='bx bxs-trash'></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
+                            <div v-if="space.sensores.length !== 0">
                                 <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
-                                    <p class="text-2xl font-bold text-gray-500 ">Ejecutores</p>
+                                    <p class="text-2xl font-bold text-gray-500">Sensores
+                                    </p>
                                 </div>
                                 <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
+                                    <!--Tabla con encabezado -->
                                     <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
                                         <div class="w-1/3">
                                             <p class="text-base font-bold text-white mx-1 ">Nombre</p>
                                         </div>
                                         <div class="w-1/3">
-                                            <p class="text-base font-bold text-white mx-1">Dispositivo</p>
+                                            <p class="text-base font-bold text-white mx-1">Unidad de medida</p>
                                         </div>
                                         <div class="w-1/3">
-                                            <p class="text-base font-bold text-white mx-1 ">Estado</p>
+                                            <p class="text-base font-bold text-white mx-1 ">Valor</p>
                                         </div>
                                         <div class="w-1/3">
                                             <p class="text-base font-bold text-white mx-1 "></p>
                                         </div>
                                     </div>
                                 </div>
-                                <div v-for="(ejecutor, index) in space.ejecutores " :key="ejecutor.id"
-                                    class="w-full flex flex-row bg-blue-600 rounder-lg pl-8 pb-2">
+                                <div v-for="(sensor, index) in space.sensores " :key="sensor.id" class="w-full flex flex-row bg-blue-600 rounder-lg
+                                pl-8
+                                ">
                                     <div class="w-1/3">
-                                        <p class="text-base font-medium text-white"> {{ index + 1 }} - {{ ejecutor.name }}
-                                        </p>
+                                        <p class="text-base font-medium text-white"> {{ index + 1 }} - {{ sensor.name }}</p>
                                     </div>
                                     <div class="w-1/3 pl-2">
-                                        <p class="text-base font-medium text-white"> {{ ejecutor.executor }}</p>
+                                        <p class="text-base font-medium text-white"> {{ sensor.unit }}</p>
                                     </div>
                                     <div class="w-1/3 pl-2">
-                                        <p class="text-base font-medium text-white "> {{ ejecutor.state }}</p>
+                                        <p class="text-base font-medium text-white "> {{ sensor.value }}</p>
                                     </div>
                                     <div class="w-1/3">
                                         <div class="flex flex-row item-center justify-end p-1 mr-20">
                                             <button
                                                 class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
                                                 type="button"
-                                                @click="showInformationExecutor(space.id, ejecutor.id); isOpenModals.id = space.id">
+                                                @click="showInformationSensor(space.id, sensor.id); isOpenModals.id = space.id">
                                                 <i class='bx bxs-rename'></i>
                                             </button>
                                             <button
                                                 class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
-                                                type="button" @click="deleteExecutor(space.id, ejecutor.id)">
-                                                <!--Icono de basura con boxicon i -->
+                                                type="button" @click="deleteSensor(space.id, sensor.id)">
                                                 <i class='bx bxs-trash'></i>
                                             </button>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                            <div v-if="space.ejecutores.length !== 0">
+                                <div>
+                                    <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
+                                        <p class="text-2xl font-bold text-gray-500 ">Ejecutores</p>
+                                    </div>
+                                    <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
+                                        <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
+                                            <div class="w-1/3">
+                                                <p class="text-base font-bold text-white mx-1 ">Nombre</p>
+                                            </div>
+                                            <div class="w-1/3">
+                                                <p class="text-base font-bold text-white mx-1">Dispositivo</p>
+                                            </div>
+                                            <div class="w-1/3">
+                                                <p class="text-base font-bold text-white mx-1 ">Estado</p>
+                                            </div>
+                                            <div class="w-1/3">
+                                                <p class="text-base font-bold text-white mx-1 "></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-for="(ejecutor, index) in space.ejecutores " :key="ejecutor.id"
+                                        class="w-full flex flex-row bg-blue-600 rounder-lg pl-8 pb-2">
+                                        <div class="w-1/3">
+                                            <p class="text-base font-medium text-white"> {{ index + 1 }} - {{ ejecutor.name
+                                            }}
+                                            </p>
+                                        </div>
+                                        <div class="w-1/3 pl-2">
+                                            <p class="text-base font-medium text-white"> {{ ejecutor.executor }}</p>
+                                        </div>
+                                        <div class="w-1/3 pl-2">
+                                            <p class="text-base font-medium text-white "> {{ ejecutor.state }}</p>
+                                        </div>
+                                        <div class="w-1/3">
+                                            <div class="flex flex-row item-center justify-end p-1 mr-20">
+                                                <button
+                                                    class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
+                                                    type="button"
+                                                    @click="showInformationExecutor(space.id, ejecutor.id); isOpenModals.id = space.id">
+                                                    <i class='bx bxs-rename'></i>
+                                                </button>
+                                                <button
+                                                    class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
+                                                    type="button" @click="deleteExecutor(space.id, ejecutor.id)">
+                                                    <!--Icono de basura con boxicon i -->
+                                                    <i class='bx bxs-trash'></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Si el sensor y los ejecutores son vacios muestro mensaje de sin sensores y sin dispositivos-->
+                            <div v-if="space.sensores.length === 0 && space.ejecutores.length === 0">
+                                <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
+                                    <p class="text-2xl font-bold text-gray-500 ">Sin sensores ni ejecutores.</p>
                                 </div>
                             </div>
                             <div>
