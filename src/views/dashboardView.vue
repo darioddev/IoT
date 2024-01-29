@@ -9,11 +9,12 @@ import { ref, reactive, onBeforeMount } from 'vue';
 import { hasEmptyFields, generateUUID } from '@/lib/validations.js';
 import { espacios } from '@/lib/spaces.js';
 import { devices } from '@/lib/devices.js'
+import { getDataChanged_document , auth } from '@/lib/firebase.js';
 
-let id;
+const id = ref(auth.currentUser.uid)
+
 const router = useRouter() // Variable router para redireccionar
 const isLoading = ref(false); // Variable reactiva para mostrar el loader
-
 const spaces = reactive([]); // Variable reactiva para los espacios del usuario
 const units = reactive([]) // Variable para las unidades de medida
 const executors = reactive([]) // Variable para los ejecutores
@@ -79,6 +80,8 @@ const OpenModal = (type, id = -1) => { // El id por defecto es -1
     isOpenModals.value[type] = !isOpenModals.value[type]; // Cambio el valor de la propiedad del modal recibida por parametro
 }
 
+
+
 //Crea un nuevo espacio
 const createSpace = async () => {
     try {
@@ -97,7 +100,7 @@ const createSpace = async () => {
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         spaces.push({ id: generateUUID(), name: newSpaceName.value, sensores: sensor, ejecutores: executor }); // Añado el nuevo espacio al array de espacios
-        await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo espacio
+        await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo espacio
         closeModal(); // Cierro el modal
         resetModal(); // Reseteo los valores del modal
     } catch (error) {
@@ -133,7 +136,7 @@ const addItem = async (datos) => {
         }
         // Simular un retraso para demostrar el cargador
         await new Promise((resolve) => setTimeout(resolve, 300));
-        await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
+        await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
         closeModalComponent(datos); // Cierro el modal
     } catch (error) {
         isOpenModals.value.message = error.message;
@@ -159,7 +162,7 @@ const deleteSpace = async (idSpace) => {
         const index = espacios.findSpaceIndex(spaces, idSpace); // Busco el indice del espacio en el array de espacios en base al id
         if (confirm(`¿Estás seguro de eliminar el espacio ${spaces[index].name}?`)) {
             spaces.splice(index, 1); // Elimino el espacio del array de espacios 
-            await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
+            await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
             closeModal(); // Cierro el modal
         }
     } catch (error) {
@@ -176,7 +179,7 @@ const deleteSensor = async (idSpace, idSensor) => {
         if (confirm(`¿Estás seguro de eliminar el sensor ${sensor.data.name} del espacio ${spaces[sensor.indexSpace].name}?`)) {
             // Elimino el sensor del array de sensores
             spaces[sensor.indexSpace].sensores.splice(sensor.executorIndex, 1);
-            await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
+            await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
             closeModal(); // Cierro el modal
         }
     } catch (error) {
@@ -194,7 +197,7 @@ const deleteExecutor = async (idSpace, idExecutor) => {
         if (confirm(`¿Estás seguro de eliminar el ejecutor ${executor.data.name} del espacio ${spaces[executor.indexSpace].name}?`)) {
             // Elimino el ejecutor del array de ejecutores
             spaces[executor.indexSpace].ejecutores.splice(executor.executorIndex, 1);
-            await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
+            await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
             closeModal(); // Cierro el modal
         }
     } catch (error) {
@@ -220,7 +223,7 @@ const updateExecutor = async (data) => {
         // Simular un retraso para demostrar el cargador
         await new Promise((resolve) => setTimeout(resolve, 200));
         spaces[indexSpace].ejecutores[executorIndex] = { ...data }; // Actualizo el ejecutor en el array de ejecutores
-        await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios        
+        await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios        
 
         closeModal(); // Cierro el modal
     } catch (error) {
@@ -246,7 +249,7 @@ const updateSensor = async (data) => {
         // Simular un retraso para demostrar el cargador
         await new Promise((resolve) => setTimeout(resolve, 200));
         spaces[indexSpace].sensores[sensorIndex] = { ...data }; // Actualizo el sensor en el array de sensores
-        await espacios.updateDocument(id, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
+        await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
         closeModal(); // Cierro el modal
     } catch (error) {
         isOpenModals.value.message = error.message; // Muestro un mensaje de error
@@ -282,13 +285,16 @@ const logout = async () => {
     }
 };
 
+getDataChanged_document(espacios.name, id.value, (doc) => {
+    //Borro todo el array de espacios
+    spaces.splice(0, spaces.length);
+    doc.data().space.map(space => spaces.push(space));
+})
+
 // Antes de montar el componente obtengo los datos del usuario y los espacios que tiene
 onBeforeMount(async () => {
     isLoading.value = true; // Muestro el loader
     try {
-        const { uid } = await useAuth.getAuth();
-        id = uid;
-
         const getUnits = async () => {
             const unitsData = await devices.getUnits();
             unitsData.map(unit => units.push(unit))
@@ -297,12 +303,7 @@ onBeforeMount(async () => {
             const executorsData = await devices.getExecutors();
             executorsData.forEach(executor => executors.push(executor))
         }
-        const getSpaces = async () => {
-            const { space } = await espacios.getDocument(uid);
-            space.forEach(space => spaces.push(space))
-        }
 
-        await getSpaces();
         await getUnits();
         await getExecutors();
     } catch (error) {
@@ -312,8 +313,6 @@ onBeforeMount(async () => {
 
     }
 })
-
-
 
 </script>
 
@@ -637,9 +636,7 @@ onBeforeMount(async () => {
                                 <div class="col-span-2 flex items-center justify-between pt-2">
                                     <selectComponent name="stateExecutor" id="stateExecutor"
                                         :elementos="[{ name: 'Activo', value: 1 }, { name: 'Inactivo', value: 0 }]"
-                                        text="Estado del ejecutor" @change="handleSelect" 
-                                        :selectedValue="'Activo'"
-                                        />
+                                        text="Estado del ejecutor" @change="handleSelect" />
                                 </div>
                             </div>
                         </div>

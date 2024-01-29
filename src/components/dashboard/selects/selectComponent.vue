@@ -25,7 +25,7 @@ const { name, elementos, text , selectedValue} = defineProps({
     },
 })
 
-const selectedOption = ref('');
+const selectedOption = ref(selectedValue);
 
 watch(() => selectedValue, (newValue) => {
     selectedOption.value = newValue;
