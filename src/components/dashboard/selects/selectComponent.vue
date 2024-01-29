@@ -21,7 +21,7 @@ const { name, elementos, text , selectedValue} = defineProps({
     selectedValue: {
         type: String,
         required: false,
-        default: '', // Valor predeterminado, puedes cambiarlo según necesites
+        default: '',
     },
 })
 
