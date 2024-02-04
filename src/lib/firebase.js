@@ -38,19 +38,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig) 
 const db = getFirestore(app)
 export const auth = getAuth(app) // Obtenemos la autenticación de Firebase
-//CRUD
-
-export const saveData = (ref, objeto) => addDoc(collection(db, ref), objeto)
-export const getDataCollection = (ref) => getDocs(collection(db, ref))
 
 //Sobre una collection
 export const getDataChanged_collection = (ref, callBack) =>
   onSnapshot(collection(db, ref), callBack)
 //Sobre un documento
 export const getDataChanged_document = (ref, document, callBack) => onSnapshot(doc(db, ref, document), callBack)
-export const deleteData = (id, ref) => deleteDoc(doc(db, ref, id))
-export const getData = (id, ref) => getDoc(doc(db, ref, id))
-export const updateData = (id, ref, objeto) => updateDoc(doc(db, ref, id), objeto)
 
 // Métodos de autenticación
 export const createUserCredentials = (email, password , displayName) =>
@@ -63,15 +56,12 @@ export const signInUserCredentials = (email, password) =>
 // Método para cerrar sesión
 export const signOutUser = () => signOut(auth)
 
-
 export const onAuthStateChangedUser = (callBack) => onAuthStateChanged(auth, callBack)
 
 export const signInWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvider())
 
 /* Metodo que permite guardar un doucmento con el id que pongamos*/
 export const saveDataWithId = (ref, id, objeto) => setDoc(doc(db, ref, id), objeto)
-
-
 
 // Acceder a una subcolección de un documento con snapshot
 export const getSubCollection = (ref, id, subCollection, callBack) =>

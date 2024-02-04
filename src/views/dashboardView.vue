@@ -5,11 +5,11 @@ import modalComponent from '@/components/dashboard/modal/modalComponent.vue';
 
 import { useAuth } from '@/lib/auth.js'
 import { useRouter } from 'vue-router'
-import { ref, reactive, onBeforeMount, createSlots } from 'vue';
-import { hasEmptyFields, generateUUID } from '@/lib/validations.js';
+import { ref, reactive, onBeforeMount } from 'vue';
+import { hasEmptyFields } from '@/lib/validations.js';
 import { espacios } from '@/lib/spaces.js';
 import { devices } from '@/lib/devices.js'
-import { getDataChanged_document, auth, getSubCollection, saveSubCollection, updateSubCollection } from '@/lib/firebase.js';
+import { auth, getSubCollection } from '@/lib/firebase.js';
 
 const id = ref(auth.currentUser.uid)
 
@@ -231,14 +231,6 @@ const logout = async () => {
         console.log(error) // Si hay un error lo muestro por consola
     }
 };
-
-/*
-getDataChanged_document(espacios.name, id.value, (doc) => {
-    //Borro todo el array de espacios
-    //spaces.splice(0, spaces.length);
-    console.log(doc.data().spaces)
-
-})*/
 
 
 getSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLLECTION_NAMES, (doc) => {
