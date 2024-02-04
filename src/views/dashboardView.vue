@@ -53,8 +53,6 @@ const isOpenModals = ref({  // Variable reactiva para mostrar el modal
     }
 });
 
-console.log(devicesAndSensors)
-
 const resetModal = () => {
     isOpenModals.value.id = -1; // Me aseguro de que el id del espacio sea -1
     newSpaceName.value = ''; // Reseteo el nombre del espacio
@@ -189,9 +187,9 @@ const updateDevice = async (data, type) => {
         }
         const { id: uid, ...rest } = data // Extraigo el id del dispositivo y el resto de datos para almacenar todo menos el id
         // Mostrar cargador antes de cerrar el modal
-        isOpenModals.value.loading.load = { load: true, message: `Actualizando ${type}...` }
+        isOpenModals.value.loading = { load: true, message: `Actualizando ${type}...` }
         // Simular un retraso para demostrar el cargador
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         devices.updateDevice(
             id.value, // Id del usuario
             uid, // Id del dispositivo
@@ -205,7 +203,7 @@ const updateDevice = async (data, type) => {
 
 const handleSubmitFunction = (data) => {
     if (!newSpaceSensors.value.name.trim()) {
-        updateDevice(data , 'executor');
+        updateDevice(data, 'executor');
     } else {
         updateDevice(data, 'sensor');
     }
@@ -235,17 +233,14 @@ const logout = async () => {
 
 getSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLLECTION_NAMES, (doc) => {
     spaces.splice(0, spaces.length);
-    doc.forEach((doc) => {
-        spaces.push({ id: doc.id, name: doc.data().name })
-        //saveSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLECTION_DEVICES, { name: 'sensor', unit: 'C', value: 0, idSpace: doc.id })
-    });
+    doc.forEach((doc) => console.log(doc.data()))    
+    doc.forEach((doc) => spaces.push({ id: doc.id, name: doc.data().name }))
 });
 
+// Cada vez que se actualice el documento de los espacios se actualizara la variable reactiva 
 getSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLECTION_DEVICES, (doc) => {
     devicesAndSensors.splice(0, devicesAndSensors.length);
-    doc.forEach((doc) => {
-        devicesAndSensors.push({ id: doc.id, ...doc.data() })
-    });
+    doc.forEach((doc) => devicesAndSensors.push({ id: doc.id, ...doc.data() }))
 });
 
 // Antes de montar el componente obtengo los datos del usuario y los espacios que tiene
@@ -260,17 +255,14 @@ onBeforeMount(async () => {
             const executorsData = await devices.getExecutors();
             executorsData.forEach(executor => executors.push(executor))
         }
-
         await getUnits();
         await getExecutors();
     } catch (error) {
         console.error(error) // Si hay un error lo muestro por consola
     } finally {
         isLoading.value = false; // Oculto el loader
-
     }
 })
-
 </script>
 
 <template>
@@ -433,7 +425,7 @@ onBeforeMount(async () => {
                                             </div>
                                             <div class="w-1/3 pl-2">
                                                 <p class="text-base font-medium text-white flex items-center">
-                                                    <i :class="['bx', device.state === 1 ? 'bxs-toggle-right' : 'bxs-toggle-left', 'bx-lg', 'cursor-pointer', device.state === 1 ? 'text-green-500' : 'text-red-500', 'rounded-full', 'transition-opacity duration-300 ease-in-out']"
+                                                    <i :class="['bx', Number(device.state) === 1 ? 'bxs-toggle-right' : 'bxs-toggle-left', 'bx-lg', 'cursor-pointer', Number(device.state) === 1 ? 'text-green-500' : 'text-red-500', 'rounded-full', 'transition-opacity duration-300 ease-in-out']"
                                                         style="vertical-align: middle; opacity: 1;"
                                                         title="Estado del ejecutor"
                                                         @click="devices.updateDevice(id, device.id, { state: device.state === 1 ? 0 : 1 })"></i>

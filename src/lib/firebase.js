@@ -3,12 +3,10 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase
 import {
   getFirestore,
   collection,
-  getDocs,
   onSnapshot,
   addDoc,
   deleteDoc,
   doc,
-  getDoc,
   updateDoc,
   setDoc
 } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase-firestore.js'
@@ -62,7 +60,7 @@ export const signInWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvid
 
 /* Metodo que permite guardar un doucmento con el id que pongamos*/
 export const saveDataWithId = (ref, id, objeto) => setDoc(doc(db, ref, id), objeto)
-
+  
 // Acceder a una subcolección de un documento con snapshot
 export const getSubCollection = (ref, id, subCollection, callBack) =>
   onSnapshot(collection(doc(db, ref, id), subCollection), callBack)
