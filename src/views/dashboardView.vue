@@ -233,7 +233,6 @@ const logout = async () => {
 
 getSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLLECTION_NAMES, (doc) => {
     spaces.splice(0, spaces.length);
-    doc.forEach((doc) => console.log(doc.data()))    
     doc.forEach((doc) => spaces.push({ id: doc.id, name: doc.data().name }))
 });
 
