@@ -52,9 +52,6 @@ export const deleteData = (id, ref) => deleteDoc(doc(db, ref, id))
 export const getData = (id, ref) => getDoc(doc(db, ref, id))
 export const updateData = (id, ref, objeto) => updateDoc(doc(db, ref, id), objeto)
 
-// Obtener un documento por id
-
-
 // Métodos de autenticación
 export const createUserCredentials = (email, password , displayName) =>
   createUserWithEmailAndPassword(auth, email, password , displayName)
@@ -75,3 +72,16 @@ export const signInWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvid
 export const saveDataWithId = (ref, id, objeto) => setDoc(doc(db, ref, id), objeto)
 
 
+
+// Acceder a una subcolección de un documento con snapshot
+export const getSubCollection = (ref, id, subCollection, callBack) =>
+  onSnapshot(collection(doc(db, ref, id), subCollection), callBack)
+// Almacenar un documento en una subcolección con id aleatorio
+export const saveSubCollection = (ref, id, subCollection, objeto) =>
+  addDoc(collection(doc(db, ref, id), subCollection), objeto)
+// Eliminar un documento de una subcolección 
+export const deleteSubCollection = (ref, id, subCollection, subId) =>
+  deleteDoc(doc(db, ref, id, subCollection, subId))
+//Actualizar un documento de una subcolección
+export const updateSubCollection = (ref, id, subCollection, subId, objeto) =>
+  updateDoc(doc(db, ref, id, subCollection, subId), objeto)

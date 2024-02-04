@@ -5,31 +5,39 @@ import modalComponent from '@/components/dashboard/modal/modalComponent.vue';
 
 import { useAuth } from '@/lib/auth.js'
 import { useRouter } from 'vue-router'
-import { ref, reactive, onBeforeMount } from 'vue';
+import { ref, reactive, onBeforeMount, createSlots } from 'vue';
 import { hasEmptyFields, generateUUID } from '@/lib/validations.js';
 import { espacios } from '@/lib/spaces.js';
 import { devices } from '@/lib/devices.js'
-import { getDataChanged_document, auth } from '@/lib/firebase.js';
+import { getDataChanged_document, auth, getSubCollection, saveSubCollection, updateSubCollection } from '@/lib/firebase.js';
 
 const id = ref(auth.currentUser.uid)
 
 const router = useRouter() // Variable router para redireccionar
 const isLoading = ref(false); // Variable reactiva para mostrar el loader
-const spaces = reactive([]); // Variable reactiva para los espacios del usuario
-const units = reactive([]) // Variable para las unidades de medida
-const executors = reactive([]) // Variable para los ejecutores
+const spaces = reactive([]); // Variable reactiva para el nombre y id de los espacios del usuario 
+const devicesAndSensors = reactive([]) // Variable reactiva para los dispositivos y sensores del usuario
+
+const units = reactive([]) // Variable para las unidades de medida que obtengo de la base de datos
+const executors = reactive([]) // Variable para los ejecutores que obtengo de la base de datos
 const showDetails = ref([]); // Variable reactiva para mostrar los detalles del espacio
 
+// Devuelve los sensores y ejecutores de un espacio en base al id del espacio y el tipo de entidad
+const getDevicesAndSensors = (id) => devicesAndSensors.filter(device => device.idSpace === id)
+
 const newSpaceName = ref(''); // Variable reactiva para el nombre del nuevo espacio 
+const createSpaceWithoutDevices = ref(false); //Toogle que permite crear un espacio sin sensores ni ejecutores
 const newSpaceSensors = ref({ // Variable reactiva para los sensores del nuevo espacio
     name: '', // Nombre del sensor
     unit: '', // Unidad de medida del sensor
+    type: 'sensor',
     value: '' // Valor del sensor
 });
 const newSpaceExecutors = ref({ // Variable reactiva para los ejecutores del nuevo espacio
     name: '', // Nombre del ejecutor
     executor: '', // Dispositivo del ejecutor
-    state: '' // Estado del ejecutor
+    type: 'executor',
+    state: 1 // Estado del ejecutor
 });
 
 const isOpenModals = ref({  // Variable reactiva para mostrar el modal
@@ -45,12 +53,14 @@ const isOpenModals = ref({  // Variable reactiva para mostrar el modal
     }
 });
 
+console.log(devicesAndSensors)
 
 const resetModal = () => {
     isOpenModals.value.id = -1; // Me aseguro de que el id del espacio sea -1
     newSpaceName.value = ''; // Reseteo el nombre del espacio
     newSpaceSensors.value = { name: '', unit: '', value: '' }; // Reseteo los sensores del espacio
-    newSpaceExecutors.value = { name: '', executor: '', state: 0 }; // Reseteo los ejecutores del espacio
+    newSpaceExecutors.value = { name: '', executor: '', state: 1 }; // Reseteo los ejecutores del espacio
+    createSpaceWithoutDevices.value = false; // Reseteo el valor del toggle
 }
 
 const closeModal = () => {
@@ -81,175 +91,112 @@ const OpenModal = (type, id = -1) => { // El id por defecto es -1
 }
 
 
-
 //Crea un nuevo espacio
 const createSpace = async () => {
     try {
         if (!newSpaceName.value.trim()) throw new Error('El nombre del espacio no puede estar vacío'); // Si el nombre del espacio ya existe lanza un error
-        if (espacios.isExistSpace(spaces, newSpaceName.value)) { // Si el nombre del espacio ya existe lanza un error
-            throw new Error(`Ya existe un espacio con el nombre : ${newSpaceName.value}`); // Muestro un mensaje de error
+        if (espacios.isExistSpace(spaces, newSpaceName.value)) throw new Error(`Ya existe un espacio con el nombre : ${newSpaceName.value}`); // Muestro un mensaje de error
+        if (!createSpaceWithoutDevices.value) {
+            if (hasEmptyFields(newSpaceSensors.value)) throw new Error('Los campos del sensor no pueden estar vacíos'); // Si algun campo del sensor esta vacio lanza un error
+            if (hasEmptyFields(newSpaceExecutors.value)) throw new Error('Los campos del ejecutor no pueden estar vacíos'); // Si algun campo del ejecutor esta vacio lanza un error
         }
-        const sensor = [{ id: generateUUID(), ...newSpaceSensors.value }]; // Creo un array de sensores con el nuevo sensor y los valores del nuevo sensor
-        const executor = [{ id: generateUUID(), ...newSpaceExecutors.value }]; // Creo un array de ejecutores con el nuevo ejecutor y los valores del nuevo ejecutor
+        isOpenModals.value.loading = { load: true, message: 'Creando espacio...' }; // Muestro el loader
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Simulo un retraso para demostrar el cargador
+        const space = await espacios.saveSpace(id.value, { name: newSpaceName.value }); // Guardo el espacio en la base de datos
 
-        if (hasEmptyFields(newSpaceSensors.value) || hasEmptyFields(newSpaceExecutors.value)) { // Si algun campo esta vacio lanza un error
-            throw new Error('Debes añadir al menos un sensor y un ejecutor');
+        if (!createSpaceWithoutDevices.value) {
+            await devices.saveDevice(id.value, { ...newSpaceSensors.value, idSpace: space.id }) // Guardo el sensor en la base de datos
+            await devices.saveDevice(id.value, { ...newSpaceExecutors.value, idSpace: space.id }) // Guardo el ejecutor en la base de datos   
         }
-        isOpenModals.value.message = ''; // Reseteo el mensaje de error
-        isOpenModals.value.loading = { load: true, message: 'Añadiendo espacio...' };
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        spaces.push({ id: generateUUID(), name: newSpaceName.value, sensores: sensor, ejecutores: executor }); // Añado el nuevo espacio al array de espacios
-        await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo espacio
         closeModal(); // Cierro el modal
-        resetModal(); // Reseteo los valores del modal
     } catch (error) {
         isOpenModals.value.message = error.message; // Muestro un mensaje de error
     }
 };
 
 //Añado un nuevo sensor o ejecutor
-const addItem = async (datos) => {
+const addDevice = async (datos) => {
     try {
-        //Manipulamos el objeto data para que tenga el formato correcto
-        //Si es sensor nos quedamos solo con sus parametros y si es ejecutor nos quedamos con sus parametros
-        const data = isOpenModals.value.sensor ?
-            { id: generateUUID(), name: datos.name, unit: datos.unit, value: datos.value } :
-            { id: generateUUID(), name: datos.name, executor: datos.executor, state: datos.state };
-        if (isOpenModals.value.id === -1) throw new Error('Debes seleccionar un espacio'); // Si no se selecciono un espacio lanza un error
-        if (hasEmptyFields(data)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
-        const index = espacios.findSpaceIndex(spaces, isOpenModals.value.id); // Busco el indice del espacio en el array de espacios en base al id
-
-        // Si el tipo de entidad es un sensor y ya existe un sensor con ese nombre lanza un error
-        if (isOpenModals.value.sensor && espacios.isExistSensor(spaces, isOpenModals.value.id, data.name)) throw new Error(`Ya existe un sensor con el nombre : ${data.name}`);
-
-        // Si el tipo de entidad es un ejecutor y ya existe un ejecutor con ese nombre lanza un error
-        if (isOpenModals.value.executor && espacios.isExistExecutor(spaces, isOpenModals.value.id, data.name)) throw new Error(`Ya existe un ejecutor con el nombre : ${data.name}`);
-
-        if (isOpenModals.value.sensor) {
-            spaces[index].sensores.push({ ...data }); // Si el tipo de entidad es un sensor , añado el nuevo sensor al array de sensores del espacio
-            isOpenModals.value.loading = { load: true, message: 'Añadiendo sensor...' };
+        datos = devices.deviceObject(isOpenModals.value.sensor, datos); // Creo un objeto con los datos del sensor o ejecutor
+        if (hasEmptyFields(datos)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
+        const items = getDevicesAndSensors(isOpenModals.value.id); // Obtengo los dispositivos y sensores del espacio en base al id
+        if (isOpenModals.value.sensor) { // Si el modal es de añadir un nuevo sensor
+            if (devices.isExistDevice(items, 'sensor', datos.name)) { // Si el nombre del sensor ya existe lanza un error
+                throw new Error(`Ya existe un sensor con el nombre : ${datos.name} en el espacio ${spaces.find(space => space.id === isOpenModals.value.id).name}`); // Muestro un mensaje de error
+            }
+        } else { // Si el modal es de añadir un nuevo ejecutor
+            if (devices.isExistDevice(items, 'executor', datos.name)) { // Si el nombre del ejecutor ya existe lanza un error
+                throw new Error(`Ya existe un ejecutor con el nombre : ${datos.name}`); // Muestro un mensaje de error
+            }
         }
-        if (isOpenModals.value.executor) {
-            spaces[index].ejecutores.push({ ...data }); // Si el tipo de entidad es un ejecutor , añado el nuevo ejecutor al array de ejecutores del espacio
-            isOpenModals.value.loading = { load: true, message: 'Añadiendo ejecutor...' };
-        }
-        // Simular un retraso para demostrar el cargador
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
-        closeModalComponent(datos); // Cierro el modal
+        isOpenModals.value.loading = { load: true, message: `Añadiendo ${datos.type}...` };
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await devices.saveDevice(
+            id.value, // Id del usuario
+            {
+                ...datos, // Datos del dispositivo ,
+                idSpace: isOpenModals.value.id // Id del espacio para saber a que espacio pertenece
+            }
+        )
+        closeModal(); // Cierro el modal
     } catch (error) {
         isOpenModals.value.message = error.message;
     }
 };
 
-const showInformationSensor = (idSpace, idSensor) => {
-    const sensor = espacios.findSensor(spaces, idSpace, idSensor) // Busco el sensor en el array de sensores en base al id
-    newSpaceSensors.value = { ...sensor.data }; // Asigno los valores del sensor a la variable reactiva
-    OpenModal('editSpace'); // Abro el modal de editar espacio
-};
-
-//Funcion que muestra la informacion del ejecutor
-const showInformationExecutor = (idSpace, idExecutor) => {
-    const executor = espacios.findExecutor(spaces, idSpace, idExecutor) // Busco el ejecutor en el array de ejecutores en base al id
-    newSpaceExecutors.value = { ...executor.data }; // Asigno los valores del ejecutor a la variable reactiva
-    OpenModal('editSpace'); // Abro el modal de editar espacio
-};
-
-//Elimino un espacio 
 const deleteSpace = async (idSpace) => {
     try {
-        const index = espacios.findSpaceIndex(spaces, idSpace); // Busco el indice del espacio en el array de espacios en base al id
-        if (confirm(`¿Estás seguro de eliminar el espacio ${spaces[index].name}?`)) {
-            spaces.splice(index, 1); // Elimino el espacio del array de espacios 
-            await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
-            closeModal(); // Cierro el modal
+        if (confirm(`¿Estás seguro de eliminar el espacio ${spaces.find(space => space.id === idSpace).name}?`))
+            await espacios.deleteDocument(id.value, idSpace); // Elimino el espacio del documento del usuario
+    } catch (error) {
+        console.error(error) // Si hay un error lo muestro por consola
+    }
+};
+
+const deleteDevice = async (idSpace, idDevice) => {
+    try {
+        const nameSpace = spaces.find(space => space.id === idSpace).name; // Obtengo el nombre del espacio en base al id
+        const { name: nameDevice, type } = devicesAndSensors.find(sensor => sensor.id === idDevice); // Obtengo el nombre del sensor en base al id
+        if (confirm(`¿Estás seguro de eliminar el ${type} ${nameDevice} del espacio ${nameSpace}?`)) {
+            await devices.deleteDevice(id.value, idDevice); // Elimino el sensor del documento del usuario
         }
     } catch (error) {
         console.error(error) // Si hay un error lo muestro por consola
     }
 };
 
-//Elimino un sensor 
-// idSpace : id del espacio
-// idSensor : id del sensor
-const deleteSensor = async (idSpace, idSensor) => {
-    try {
-        const sensor = espacios.findSensor(spaces, idSpace, idSensor); // Busco el sensor en el array de sensores en base al id
-        if (confirm(`¿Estás seguro de eliminar el sensor ${sensor.data.name} del espacio ${spaces[sensor.indexSpace].name}?`)) {
-            // Elimino el sensor del array de sensores
-            spaces[sensor.indexSpace].sensores.splice(sensor.executorIndex, 1);
-            await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
-            closeModal(); // Cierro el modal
-        }
-    } catch (error) {
-        console.error(error) // Si hay un error lo muestro por consola
-    }
+const showInformationDevice = (idDevice, type) => {
+    const devices = devicesAndSensors.find(device => device.id === idDevice && device.type === type) // Busco el sensor en el array de sensores en base al id
+    if (type === 'sensor')
+        newSpaceSensors.value = { ...devices }; // Asigno los valores del sensor a la variable reactiva
+    if (type === 'executor')
+        newSpaceExecutors.value = { ...devices }; // Asigno los valores del ejecutor a la variable reactiva
+    OpenModal('editSpace'); // Abro el modal de editar espacio
 };
 
-//Elimino un ejecutor
-// idSpace : id del espacio
-// idExecutor : id del ejecutor
-
-const deleteExecutor = async (idSpace, idExecutor) => {
-    try {
-        const executor = espacios.findExecutor(spaces, idSpace, idExecutor); // Busco el ejecutor en el array de ejecutores en base al id
-        if (confirm(`¿Estás seguro de eliminar el ejecutor ${executor.data.name} del espacio ${spaces[executor.indexSpace].name}?`)) {
-            // Elimino el ejecutor del array de ejecutores
-            spaces[executor.indexSpace].ejecutores.splice(executor.executorIndex, 1);
-            await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
-            closeModal(); // Cierro el modal
-        }
-    } catch (error) {
-        console.error(error) // Si hay un error lo muestro por consola
-    }
-};
-
-const updateExecutor = async (data) => {
-    try {
-        if (hasEmptyFields(data)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
-        //Primero de todo comprobaremos si el nombre nuevo del ejecutor es igual al que ya tenia
-        //Si es igual no habra problema y se actualizara el ejecutor
-        //Si es distinto comprobaremos si ya existe un ejecutor con ese nombre
-        //Si existe un ejecutor con ese nombre lanzaremos un error
-        const { indexSpace, executorIndex } = espacios.findExecutor(spaces, isOpenModals.value.id, data.id); // Busco el ejecutor en el array de ejecutores en base al id
-        if (data.name !== spaces[indexSpace].ejecutores[executorIndex].name) { // Si el nombre del ejecutor es distinto al que ya tenia
-            if (espacios.isExistExecutor(spaces, isOpenModals.value.id, data.name)) { // Si el nombre del ejecutor ya existe lanza un error
-                throw new Error(`Ya existe un ejecutor con el nombre : ${data.name}`); // Muestro un mensaje de error
-            }
-        }
-        // Mostrar cargador antes de cerrar el modal
-        isOpenModals.value.loading.load = { load: true, message: 'Actualizando ejecutor...' }
-        // Simular un retraso para demostrar el cargador
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        spaces[indexSpace].ejecutores[executorIndex] = { ...data }; // Actualizo el ejecutor en el array de ejecutores
-        await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios        
-
-        closeModal(); // Cierro el modal
-    } catch (error) {
-        isOpenModals.value.message = error.message; // Muestro un mensaje de error
-    }
-}
-
-const updateSensor = async (data) => {
+const updateDevice = async (data, type) => {
     try {
         if (hasEmptyFields(data)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
         //Primero de todo comprobaremos si el nombre nuevo del sensor es igual al que ya tenia
         //Si es igual no habra problema y se actualizara el sensor
         //Si es distinto comprobaremos si ya existe un sensor con ese nombre
         //Si existe un sensor con ese nombre lanzaremos un error
-        const { indexSpace, sensorIndex } = espacios.findSensor(spaces, isOpenModals.value.id, data.id); // Busco el sensor en el array de sensores en base al id
-        if (data.name !== spaces[indexSpace].sensores[sensorIndex].name) { // Si el nombre del sensor es distinto al que ya tenia
-            if (espacios.isExistSensor(spaces, isOpenModals.value.id, data.name)) { // Si el nombre del sensor ya existe lanza un error
+        const device = devicesAndSensors.find(device => device.id === data.id && device.type === type); // Busco el dispositivo en el array de dispositivos en base al id y el tipo
+        if (data.name !== device.name) { // Si el nombre del sensor es distinto al que ya tenia
+            if (devices.isExistDevice(devicesAndSensors, type, data.name)) { // Si el nombre del sensor ya existe lanza un error
                 throw new Error(`Ya existe un sensor con el nombre : ${data.name}`); // Muestro un mensaje de error
             }
         }
+        const { id: uid, ...rest } = data // Extraigo el id del dispositivo y el resto de datos para almacenar todo menos el id
         // Mostrar cargador antes de cerrar el modal
-        isOpenModals.value.loading = { load: true, message: 'Actualizando sensor...' };
+        isOpenModals.value.loading.load = { load: true, message: `Actualizando ${type}...` }
         // Simular un retraso para demostrar el cargador
         await new Promise((resolve) => setTimeout(resolve, 200));
-        spaces[indexSpace].sensores[sensorIndex] = { ...data }; // Actualizo el sensor en el array de sensores
-        await espacios.updateDocument(id.value, { space: spaces }); // Actualizo el documento del usuario con el nuevo array de espacios
+        devices.updateDevice(
+            id.value, // Id del usuario
+            uid, // Id del dispositivo
+            { ...rest } // Datos del dispositivo
+        )
         closeModal(); // Cierro el modal
     } catch (error) {
         isOpenModals.value.message = error.message; // Muestro un mensaje de error
@@ -258,9 +205,9 @@ const updateSensor = async (data) => {
 
 const handleSubmitFunction = (data) => {
     if (!newSpaceSensors.value.name.trim()) {
-        updateExecutor(data);
+        updateDevice(data , 'executor');
     } else {
-        updateSensor(data);
+        updateDevice(data, 'sensor');
     }
 };
 
@@ -285,11 +232,29 @@ const logout = async () => {
     }
 };
 
+/*
 getDataChanged_document(espacios.name, id.value, (doc) => {
     //Borro todo el array de espacios
+    //spaces.splice(0, spaces.length);
+    console.log(doc.data().spaces)
+
+})*/
+
+
+getSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLLECTION_NAMES, (doc) => {
     spaces.splice(0, spaces.length);
-    doc.data().space.map(space => spaces.push(space));
-})
+    doc.forEach((doc) => {
+        spaces.push({ id: doc.id, name: doc.data().name })
+        //saveSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLECTION_DEVICES, { name: 'sensor', unit: 'C', value: 0, idSpace: doc.id })
+    });
+});
+
+getSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLECTION_DEVICES, (doc) => {
+    devicesAndSensors.splice(0, devicesAndSensors.length);
+    doc.forEach((doc) => {
+        devicesAndSensors.push({ id: doc.id, ...doc.data() })
+    });
+});
 
 // Antes de montar el componente obtengo los datos del usuario y los espacios que tiene
 onBeforeMount(async () => {
@@ -382,15 +347,15 @@ onBeforeMount(async () => {
                     <p class="text-3xl font-bold text-gray-500">Tus espacios</p>
                 </div>
                 <div class="flex flex-col justify-center w-ful mx-4">
-                    <div v-for="(space, id) in spaces" :key="space.name" class="mx-1">
+                    <div v-for="space in spaces" :key="space.name" class="mx-1">
                         <div class="w-full flex rounded-t-lg bg-blue-700 mt-1">
                             <div>
-                                <p class="text-2xl font-bold text-white p-2">{{ space.name.trim().toLowerCase() }} </p>
+                                <p class="text-2xl font-bold text-white p-2">
+                                    {{ space.name.trim().toLowerCase() }}
+                                </p>
                                 <div class="flex items-center p-1  containerDevice">
-                                    <p class="text-base font-bold text-white mx-1 underline">Sensores: {{
-                                        space.sensores.length }}</p>
-                                    <p class="text-base font-bold text-white mx-1 underline">Ejecutores: {{
-                                        space.ejecutores.length }}</p>
+                                    <p class="text-base font-bold text-white mx-1 ">Número de dispositivos :
+                                        {{ getDevicesAndSensors(space.id).length }} </p>
                                 </div>
                             </div>
                             <div class="flex flex-col items-end w-1/2 ml-auto p-5"
@@ -410,114 +375,102 @@ onBeforeMount(async () => {
                             </div>
                         </div>
                         <div v-if="showDetails[space.name]">
-                            <div v-if="space.sensores.length !== 0">
-                                <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
-                                    <p class="text-2xl font-bold text-gray-500">Sensores
-                                    </p>
-                                </div>
-                                <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
-                                    <!--Tabla con encabezado -->
-                                    <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
-                                        <div class="w-1/3">
-                                            <p class="text-base font-bold text-white mx-1 ">Nombre</p>
-                                        </div>
-                                        <div class="w-1/3">
-                                            <p class="text-base font-bold text-white mx-1">Unidad de medida</p>
-                                        </div>
-                                        <div class="w-1/3">
-                                            <p class="text-base font-bold text-white mx-1 ">Valor</p>
-                                        </div>
-                                        <div class="w-1/3">
-                                            <p class="text-base font-bold text-white mx-1 "></p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div v-for="(sensor, index) in space.sensores " :key="sensor.id" class="w-full flex flex-row bg-blue-600 rounder-lg
-                                pl-8
-                                ">
-                                    <div class="w-1/3">
-                                        <p class="text-base font-medium text-white"> {{ index + 1 }} - {{ sensor.name }}</p>
-                                    </div>
-                                    <div class="w-1/3 pl-2">
-                                        <p class="text-base font-medium text-white"> {{ sensor.unit }}</p>
-                                    </div>
-                                    <div class="w-1/3 pl-2">
-                                        <p class="text-base font-medium text-white "> {{ sensor.value }}</p>
-                                    </div>
-                                    <div class="w-1/3">
-                                        <div class="flex flex-row item-center justify-end p-1 mr-20">
-                                            <button
-                                                class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                                type="button"
-                                                @click="showInformationSensor(space.id, sensor.id); isOpenModals.id = space.id">
-                                                <i class='bx bxs-rename'></i>
-                                            </button>
-                                            <button
-                                                class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
-                                                type="button" @click="deleteSensor(space.id, sensor.id)">
-                                                <i class='bx bxs-trash'></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-if="space.ejecutores.length !== 0">
-                                <div>
-                                    <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
-                                        <p class="text-2xl font-bold text-gray-500 ">Ejecutores</p>
-                                    </div>
-                                    <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
-                                        <div class="flex flex-row items-center justify-between w-full pl-4 bg-blue-600">
-                                            <div class="w-1/3">
-                                                <p class="text-base font-bold text-white mx-1 ">Nombre</p>
+                            <div v-if="getDevicesAndSensors(space.id).length !== 0">
+                                <div v-for="device in getDevicesAndSensors(space.id)" :key="device.id" class="">
+                                    <div v-if="device.type === 'sensor'" class="w-full">
+                                        <div class="w-full flex flex-row bg-blue-600 rounder-lg p-2 items-center">
+                                            <div class="w-1/3 mx-4">
+                                                <!-- p con diciendo nombre del sensor -->
+                                                <p class="text-base font-medium text-white flex items-center">
+                                                    <i class='bx bx-radar bx-sm' style="vertical-align: middle;"></i>
+                                                    <span class="font-bold px-2 cursor-pointer" title="Nombre del sensor">{{
+                                                        device.name.toLowerCase() }}</span>
+                                                </p>
+                                            </div>
+                                            <div class="w-1/3 pl-2">
+                                                <p class="text-base font-medium text-white flex items-center">
+                                                    <i class='bx bxs-bolt-circle bx-sm cursor-pointer'
+                                                        style="vertical-align: middle;" title="Unidad del sensor"></i>
+                                                    <span class="font-bold px-2 cursor-pointer"
+                                                        title="Unidad del sensor ">{{ device.unit }}</span>
+                                                </p>
+                                            </div>
+                                            <div class="w-1/3 pl-2">
+                                                <p class="text-base font-medium text-white flex items-center">
+                                                    <i class='bx bxs-data bx-sm cursor-pointer'
+                                                        style="vertical-align: middle;" title="Valor del sensor"></i>
+                                                    <span class="font-bold px-2 cursor-pointer" title="Valor del sensor">{{
+                                                        device.value }}</span>
+                                                </p>
                                             </div>
                                             <div class="w-1/3">
-                                                <p class="text-base font-bold text-white mx-1">Dispositivo</p>
-                                            </div>
-                                            <div class="w-1/3">
-                                                <p class="text-base font-bold text-white mx-1 ">Estado</p>
-                                            </div>
-                                            <div class="w-1/3">
-                                                <p class="text-base font-bold text-white mx-1 "></p>
+                                                <div class="flex flex-row item-center justify-end mr-20">
+                                                    <button
+                                                        class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
+                                                        type="button" @click="showInformationDevice(device.id, 'sensor')">
+                                                        <i class='bx bxs-rename'></i>
+                                                    </button>
+                                                    <button
+                                                        class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
+                                                        type="button" @click="deleteDevice(space.id, device.id)">
+                                                        <i class='bx bxs-trash'></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div v-for="(ejecutor, index) in space.ejecutores " :key="ejecutor.id"
-                                        class="w-full flex flex-row bg-blue-600 rounder-lg pl-8 pb-2">
-                                        <div class="w-1/3">
-                                            <p class="text-base font-medium text-white"> {{ index + 1 }} - {{ ejecutor.name
-                                            }}
-                                            </p>
-                                        </div>
-                                        <div class="w-1/3 pl-2">
-                                            <p class="text-base font-medium text-white"> {{ ejecutor.executor }}</p>
-                                        </div>
-                                        <div class="w-1/3 pl-2">
-                                            <p class="text-base font-medium text-white "> {{ ejecutor.state }}</p>
-                                        </div>
-                                        <div class="w-1/3">
-                                            <div class="flex flex-row item-center justify-end p-1 mr-20">
-                                                <button
-                                                    class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                                    type="button"
-                                                    @click="showInformationExecutor(space.id, ejecutor.id); isOpenModals.id = space.id">
-                                                    <i class='bx bxs-rename'></i>
-                                                </button>
-                                                <button
-                                                    class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
-                                                    type="button" @click="deleteExecutor(space.id, ejecutor.id)">
-                                                    <!--Icono de basura con boxicon i -->
-                                                    <i class='bx bxs-trash'></i>
-                                                </button>
+                                    <div v-else>
+                                        <div class="w-full flex flex-row bg-blue-600 rounder-lg p-2 items-center">
+                                            <div class="w-1/3 mx-4">
+                                                <p class="text-base font-medium text-white flex items-center">
+                                                    <i class='bx bx-devices bx-sm' style="vertical-align: middle;"
+                                                        title="Nombre del ejecutor"></i>
+                                                    <span class="font-bold px-2 cursor-pointer"
+                                                        title="Nombre del ejecutor">{{
+                                                            device.name }}</span>
+                                                </p>
+                                            </div>
+                                            <div class="w-1/3 pl-2">
+                                                <p class="text-base font-medium text-white flex items-center">
+                                                    <i class='bx bxs-data bx-sm cursor-pointer'
+                                                        style="vertical-align: middle;"
+                                                        title="Dispositivo del ejecutor"></i>
+                                                    <span class="font-bold px-2 cursor-pointer"
+                                                        title="Dispositivo del ejecutor">{{ device.executor }}</span>
+                                                </p>
+                                            </div>
+                                            <div class="w-1/3 pl-2">
+                                                <p class="text-base font-medium text-white flex items-center">
+                                                    <i :class="['bx', device.state === 1 ? 'bxs-toggle-right' : 'bxs-toggle-left', 'bx-lg', 'cursor-pointer', device.state === 1 ? 'text-green-500' : 'text-red-500', 'rounded-full', 'transition-opacity duration-300 ease-in-out']"
+                                                        style="vertical-align: middle; opacity: 1;"
+                                                        title="Estado del ejecutor"
+                                                        @click="devices.updateDevice(id, device.id, { state: device.state === 1 ? 0 : 1 })"></i>
+                                                </p>
+                                            </div>
+                                            <div class="w-1/3">
+                                                <div class="flex flex-row item-center justify-end mr-20">
+                                                    <button
+                                                        class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
+                                                        type="button" @click="showInformationDevice(device.id, 'executor')">
+                                                        <i class='bx bxs-rename'></i>
+                                                    </button>
+                                                    <button
+                                                        class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
+                                                        type="button" @click="deleteDevice(space.id, device.id)">
+                                                        <i class='bx bxs-trash'></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <!-- Si el sensor y los ejecutores son vacios muestro mensaje de sin sensores y sin dispositivos-->
-                            <div v-if="space.sensores.length === 0 && space.ejecutores.length === 0">
+                            <div v-if="getDevicesAndSensors(space.id).length === 0">
                                 <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
-                                    <p class="text-2xl font-bold text-gray-500 ">Sin sensores ni ejecutores.</p>
+                                    <p class="text-2xl font-bold text-gray-500 ">No hay dispositivos ni sensores
+                                        añadidos en
+                                        este espacio</p>
                                 </div>
                             </div>
                             <div>
@@ -556,7 +509,7 @@ onBeforeMount(async () => {
             :elements="isOpenModals.sensor ? units : executors"
             :state="isOpenModals.executor ? [{ name: 'Activo', value: 1 }, { name: 'Inactivo', value: 0 }] : []"
             :value="isOpenModals[isOpenModals.sensor ? 'sensor' : 'executor']" @closeModal="closeModalComponent"
-            @handleSubmit="addItem" :messageError="isOpenModals.message" :isLoading="isOpenModals.loading"
+            @handleSubmit="addDevice" :messageError="isOpenModals.message" :isLoading="isOpenModals.loading"
             :initialData="isOpenModals.sensor ? newSpaceSensors : newSpaceExecutors" />
         <!--
         Modal para editar un espacio
@@ -608,7 +561,8 @@ onBeforeMount(async () => {
                                     </svg>
                                     {{ isOpenModals.message }}
                                 </p>
-                                <p class="text-sm font-bold text-blue-600 flex" v-if="isOpenModals.loading.load">
+                                <p class="text-sm font-bold text-blue-600 flex text-center"
+                                    v-if="isOpenModals.loading.load">
                                     <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600"
                                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
@@ -624,33 +578,49 @@ onBeforeMount(async () => {
                                 <input type="text" name="name" id="name"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 "
                                     placeholder="Nombre del espacio" v-model="newSpaceName">
-                                <label for="sensor" class="block mb-2 text-sm font-medium text-gray-900 p-1">Sensor</label>
-                                <div class="col-span-2 flex items-center justify-between">
-                                    <input type="text" name="sensor" id="sensor"
-                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 mr-2"
-                                        placeholder="Nombre del sensor" v-model="newSpaceSensors.name">
-                                    <selectComponent name="unit" :elementos="units" @change="handleSelect" />
-                                </div>
-                                <div class="col-span-2 flex items-center justify-between pt-2">
-                                    <input type="text" name="value" id="value"
-                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 "
-                                        placeholder="Valor de la unidad" v-model="newSpaceSensors.value">
+                                <div v-if="!createSpaceWithoutDevices">
+                                    <label for="sensor" class="block mb-2 text-sm font-medium text-gray-900 p-1">Sensor
+                                        <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="col-span-2 flex items-center justify-between">
+                                        <input type="text" name="sensor" id="sensor"
+                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 mr-2"
+                                            placeholder="Nombre del sensor" v-model="newSpaceSensors.name">
+                                        <selectComponent name="unit" :elementos="units" @change="handleSelect" />
+                                    </div>
+                                    <div class="col-span-2 flex items-center justify-between pt-2">
+                                        <input type="text" name="value" id="value"
+                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 "
+                                            placeholder="Valor de la unidad" v-model="newSpaceSensors.value">
 
-                                </div>
-                                <label for="executor"
-                                    class="block mb-2 text-sm font-medium text-gray-900 p-1">Ejecutor</label>
-                                <div class="col-span-2 flex items-center">
-                                    <input type="text" name="executor" id="executor"
-                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 mr-2"
-                                        placeholder="Nombre del ejecutor" v-model="newSpaceExecutors.name">
-                                    <selectComponent name="executor" :elementos="executors" @change="handleSelect" />
-                                </div>
-                                <div class="col-span-2 flex items-center justify-between pt-2">
-                                    <selectComponent name="stateExecutor" id="stateExecutor"
-                                        :elementos="[{ name: 'Activo', value: 1 }, { name: 'Inactivo', value: 0 }]"
-                                        text="Estado del ejecutor" @change="handleSelect" />
+                                    </div>
+                                    <label for="executor" class="block mb-2 text-sm font-medium text-gray-900 p-1">Ejecutor
+                                        <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="col-span-2 flex items-center">
+                                        <input type="text" name="executor" id="executor"
+                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 mr-2"
+                                            placeholder="Nombre del ejecutor" v-model="newSpaceExecutors.name">
+                                        <selectComponent name="executor" :elementos="executors" @change="handleSelect" />
+                                    </div>
+                                    <div class="col-span-2 flex items-center justify-between pt-2">
+                                        <selectComponent name="stateExecutor" id="stateExecutor"
+                                            :elementos="[{ name: 'Activo', value: 1 }, { name: 'Inactivo', value: 0 }]"
+                                            text="Estado del ejecutor" @change="handleSelect" />
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+                        <!--Contenedor con toogle que servira para poder crear el espacio sin dispositivos -->
+                        <div class="flex items-center justify-start">
+                            <label for="toggle" class="flex items-center cursor-pointer">
+                                <i :class="['bx', createSpaceWithoutDevices ? 'bxs-toggle-right' : 'bxs-toggle-left', 'bx-lg', 'cursor-pointer', createSpaceWithoutDevices ? 'text-green-500' : 'text-red-500', 'rounded-full', 'transition-opacity duration-300 ease-in-out']"
+                                    style="vertical-align: middle; opacity: 1;" title="Estado del ejecutor"
+                                    @click="createSpaceWithoutDevices = !createSpaceWithoutDevices"></i>
+                                <div class="text-gray-900 text-center">
+                                    Crear espacio sin dispositivos
+                                </div>
+                            </label>
                         </div>
                         <button type="submit"
                             class="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">

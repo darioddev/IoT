@@ -1,5 +1,5 @@
 import { User } from './crud.js'
-import { auth, onAuthStateChangedUser } from './firebase.js'
+import {  onAuthStateChangedUser } from './firebase.js'
 
 export const useAuth = {
   /**
@@ -35,18 +35,6 @@ export const useAuth = {
       throw new Error(error.message) // Si hay un error lo mostramos
     }
   },
-  /**
-   * Función para obtener el usuario actual de Firebase
-   * @returns {Object | null} Objeto con los datos del usuario actual o null si no hay ninguno
-   */
-  async getAuth() {
-    try {
-      return await auth.currentUser || null // Obtenemos el usuario actual , si no hay ninguno devuelve null
-    } catch (error) {
-      throw new Error('Error al obtener el usuario actual') // Si hay un error lo mostramos
-    }
-  },
-
   /**
    * Función para obtener el estado de la autenticación de Firebase , devuelve una promesa
    * @returns {Promise} Promesa con el estado de la autenticación

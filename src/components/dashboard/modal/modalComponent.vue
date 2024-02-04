@@ -50,18 +50,18 @@ const object = ref({
     unit: '',
     value: '',
     executor: '',
-    state: ''
+    state: 1,
 });
 
 const emit = defineEmits(['closeModal', 'handleSubmit']);
 const handleSubmit = () => emit('handleSubmit', object.value);
 const closeModal = () => emit('closeModal', object.value);
 
-
-
 const handleSelect = (e) => {
     if (props.state.length === 0) object.value = { ...object.value, unit: e.target.value }; // Si el estado es vacio agrego el valor al objeto unit
     else object.value = { ...object.value, executor: e.target.value }; // De lo contrario agrego el valor al objeto state
+
+    console.log('he seleccionado', e.target.value);
 }
 
 const handleState = (e) => { // Agrego el valor al objeto state en caso de que este componente sea un ejecutor

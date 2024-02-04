@@ -37,7 +37,7 @@ export const User = {
       const {
         user: { uid }
       } = await createUserCredentials(user.mail, user.password, user.username)
-      await espacios.createDocument({ id: uid, space: [] }) // Creamos un documento en la coleccion de espacios con el id del usuario
+      await espacios.createDocument(uid) // Creamos un documento en la coleccion de espacios con el id del usuario
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') throw new Error('El correo ya está en uso')
       else if (error.code === 'auth/invalid-email') throw new Error('El correo no es válido')
