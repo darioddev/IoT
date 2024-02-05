@@ -1,1 +1,0 @@
-const s=x=>Object.values(x).some(e=>e===""),r=(x,e)=>x===e,n=()=>{let x=new Date().getTime();return"xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx".replace(/[xy]/g,function(a){let t=(x+Math.random()*16)%16|0;return x=Math.floor(x/16),(a=="x"?t:t&3|8).toString(16)})};export{n as g,s as h,r as i};
