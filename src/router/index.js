@@ -2,8 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '@/lib/auth.js'
 
 const router = createRouter({
-  history: createWebHistory('/IoT/'),
-  mode: 'hash',
+  history: createWebHistory(import.meta.env.BASE_URL),
+  mode: 'history',
   routes: [
     {
       path: '/',
