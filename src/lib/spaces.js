@@ -2,6 +2,7 @@ import {
   saveDataWithId,
   saveSubCollection,
   deleteSubCollection,
+  updateSubCollection
 } from './firebase.js'
 
 export const espacios = {
@@ -22,6 +23,13 @@ export const espacios = {
   async deleteDocument(idUser, idSpace) {
     try {
       return await deleteSubCollection(this.name, idUser, this.spacesName, idSpace) // Eliminamos el documento en la colección de espacios con el id del usuario
+    } catch (error) {
+      throw new Error(error)
+    }
+  },
+  async updateSpace(idUser, idSpace, data) {
+    try {
+    return await updateSubCollection(this.name, idUser, this.spacesName, idSpace, data)
     } catch (error) {
       throw new Error(error)
     }

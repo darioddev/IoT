@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/auth.js'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  mode : 'history',
   routes: [
     {
       path: '/',

@@ -45,6 +45,7 @@ const isOpenModals = ref({  // Variable reactiva para mostrar el modal
     sensor: false, // Variable reactiva para mostrar el modal de añadir un nuevo sensor
     executor: false, // Variable reactiva para mostrar el modal de añadir un nuevo ejecutor
     addSpace: false, // Variable reactiva para mostrar el modal de añadir un nuevo espacio
+    name: false, // Variable reactiva para mostrar el modal de modificar el nombre del espacio
     message: '', // Variable reactiva para mostrar un mensaje de error
     editSpace: false, // Variable reactiva para mostrar el modal de editar un espacio
     loading: { // Variable reactiva para mostrar el loader en los modales 
@@ -67,6 +68,7 @@ const closeModal = () => {
         sensor: false,
         executor: false,
         addSpace: false,
+        name: false,
         message: '',
         loading: { load: false, message: 'Cargando...' }
     }
@@ -172,6 +174,11 @@ const showInformationDevice = (idDevice, type) => {
     OpenModal('editSpace'); // Abro el modal de editar espacio
 };
 
+const showInfomartionName = (idSpace) => {
+    newSpaceName.value = spaces.find(space => space.id === idSpace).name; // Asigno el nombre del espacio a la variable reactiva
+    OpenModal('name', idSpace); // Abro el modal de editar espacio
+}
+
 const updateDevice = async (data, type) => {
     try {
         if (hasEmptyFields(data)) throw new Error('Debes completar todos los campos'); // Si algun campo esta vacio lanza un error
@@ -195,6 +202,20 @@ const updateDevice = async (data, type) => {
             uid, // Id del dispositivo
             { ...rest } // Datos del dispositivo
         )
+        closeModal(); // Cierro el modal
+    } catch (error) {
+        isOpenModals.value.message = error.message; // Muestro un mensaje de error
+    }
+};
+
+const updateNameSpace = async () => {
+    try {
+        if (!newSpaceName.value.trim()) throw new Error('El nombre del espacio no puede estar vacío'); // Si el nombre del espacio ya existe lanza un error
+        const space = spaces.find(space => space.id === isOpenModals.value.id); // Busco el espacio en el array de espacios en base al id
+        if (espacios.isExistSpace(spaces, newSpaceName.value) && newSpaceName.value !== space.name) throw new Error(`Ya existe un espacio con el nombre : ${newSpaceName.value}`); // Muestro un mensaje de error
+        isOpenModals.value.loading = { load: true, message: 'Actualizando nombre del espacio...' }; // Muestro el loader
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Simulo un retraso para demostrar el cargador
+        espacios.updateSpace(id.value, isOpenModals.value.id, { name: newSpaceName.value }); // Actualizo el nombre del espacio
         closeModal(); // Cierro el modal
     } catch (error) {
         isOpenModals.value.message = error.message; // Muestro un mensaje de error
@@ -451,9 +472,9 @@ onBeforeMount(async () => {
                             <!-- Si el sensor y los ejecutores son vacios muestro mensaje de sin sensores y sin dispositivos-->
                             <div v-if="getDevicesAndSensors(space.id).length === 0">
                                 <div class="flex flex-col items-center justify-center w-full p-2 bg-blue-100 content">
-                                    <p class="text-2xl font-bold text-gray-500 ">No hay dispositivos ni sensores
-                                        añadidos en
-                                        este espacio</p>
+                                    <p class="text-2xl font-bold text-gray-500 ">No tienes sensores ni ejecutores en este
+                                        espacio</p>
+
                                 </div>
                             </div>
                             <div>
@@ -462,20 +483,27 @@ onBeforeMount(async () => {
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
                                         type="button" @click="OpenModal('sensor', space.id)" :id="id">
                                         <i class='bx bx-radar bx-sm'></i>
-                                        Añadir un nuevo sensor
+                                        <span class="hidden md:block">Añadir un nuevo sensor</span>
                                     </button>
                                     <button
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
                                         type="button" @click="OpenModal('executor', space.id)">
                                         <i class='bx bx-devices bx-sm'></i>
-                                        Añadir un nuevo ejecutor
+                                        <span class="hidden md:block">Añadir un nuevo ejecutor</span>
+                                    </button>
+                                    <button
+                                        class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
+                                        type="button" @click="showInfomartionName(space.id)">
+                                        <i class='bx bxs-rename'></i>
+                                        <span class="hidden md:block">Renombrar</span>
                                     </button>
                                     <button
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
                                         type="button" @click="deleteSpace(space.id)">
                                         <i class='bx bxs-trash text-lg mr-1'></i>
-                                        Eliminar espacio
+                                        <span class="hidden md:block">Eliminar espacio</span>
                                     </button>
+
                                 </div>
                             </div>
                         </div>
@@ -505,6 +533,83 @@ onBeforeMount(async () => {
             :value="isOpenModals.editSpace" @closeModal="closeModalComponent" @handleSubmit="handleSubmitFunction"
             :messageError="isOpenModals.message" :isLoading="isOpenModals.loading"
             :initialData="!newSpaceSensors.name.trim() ? newSpaceExecutors : newSpaceSensors" />
+
+        <!--
+            Modal para modficiar el nombre 
+        -->
+        <div id="crud-modal" tabindex="-1" aria-hidden="true"
+            class="flex overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
+            v-if="isOpenModals.name">
+            <div class="relative p-4 w-full max-w-md max-h-full">
+                <div class="relative bg-white rounded-lg shadow " id="modal">
+                    <div class="flex items center justify-between p-4 md:p-5 border-b rounded-t ">
+                        <h3 class="text-lg font-semibold text-gray-900 ">
+                            Modificar nombre
+                        </h3>
+                        <button type="button"
+                            class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center "
+                            data-modal-toggle="crud-modal" @click="closeModal">
+                            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 14 14">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+                            </svg>
+                            <span class="sr-only">Close modal</span>
+                        </button>
+                    </div>
+                    <!-- Input con el nombre -->
+                    <form class="p-4 md:p-5" @submit.prevent="updateNameSpace">
+                        <div class="grid gap-4 mb-4 grid-cols-2">
+                            <div class="col-span-2">
+                                <p class="text-sm font-bold text-red-600 flex" v-if="isOpenModals.message !== ''">
+                                    <svg xmlns="http://www.w3.org/2000/svg" x="20px" y="0px" width="25" height="25"
+                                        viewBox="0 0 48 48" class="pb-1">
+                                        <path fill="#f44336"
+                                            d="M44,24c0,11.045-8.955,20-20,20S4,35.045,4,24S12.955,4,24,4S44,12.955,44,24z">
+                                        </path>
+                                        <path fill="#fff"
+                                            d="M29.656,15.516l2.828,2.828l-14.14,14.14l-2.828-2.828L29.656,15.516z">
+                                        </path>
+                                        <path fill="#fff"
+                                            d="M32.484,29.656l-2.828,2.828l-14.14-14.14l2.828-2.828L32.484,29.656z">
+                                        </path>
+                                    </svg>
+                                    {{ isOpenModals.message }}
+                                </p>
+                                <p class="text-sm font-bold text-blue-600 flex text-center"
+                                    v-if="isOpenModals.loading.load">
+                                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600"
+                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z">
+                                        </path>
+                                    </svg>
+                                    {{ isOpenModals.loading.message }}
+                                </p>
+                                <label for="name" class="block mb-2 text-sm font-medwium text-gray-900 ">Name <span
+                                        class="text-red-500">*</span></label>
+                                <input type="text" name="name" id="name"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 "
+                                    placeholder="Nombre del espacio" v-model="newSpaceName">
+                            </div>
+                        </div>
+                        <button type="submit"
+                            class="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            <svg class="me-1 -ms-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                            Renombrar espacio
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
 
         <div id="crud-modal" tabindex="-1" aria-hidden="true"
             class="flex overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
