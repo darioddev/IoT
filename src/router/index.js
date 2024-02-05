@@ -3,13 +3,14 @@ import { useAuth } from '@/lib/auth.js'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  mode : 'history',
+  // Mode hash para que funcione en gh-pages
+  mode: 'hash', // 'history' o 'hash
   routes: [
     {
       path: '/',
       name: 'home',
       meta: {
-        title: 'Home',
+        title: 'Home'
       },
       component: () => import('@/views/homeView.vue')
     },
@@ -17,7 +18,7 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       meta: {
-        title: 'Inicio de sesion' 
+        title: 'Inicio de sesion'
       },
       component: () => import('@/views/loginView.vue')
     },
@@ -53,8 +54,14 @@ router.beforeEach(async (to, from, next) => {
   document.title = to.meta.title || 'IoT'
   const isLogged = await useAuth.isAuthenticated() // Obtenemos si el usuario está autenticado
   const requireAuth = to.matched.some((record) => record.meta.requireAuth) // Obtenemos si la ruta requiere autenticación
-  if(requireAuth && !isLogged) next({ name: 'home' }) // Si la ruta requiere autenticación y el usuario no está autenticado lo redirigimos al home
-  else if(!requireAuth && isLogged) next({ name: 'dashboard' }) // Si la ruta no requiere autenticación y el usuario está autenticado lo redirigimos al home
+  if (requireAuth && !isLogged)
+    next({
+      name: 'home'
+    }) // Si la ruta requiere autenticación y el usuario no está autenticado lo redirigimos al home
+  else if (!requireAuth && isLogged)
+    next({
+      name: 'dashboard'
+    }) // Si la ruta no requiere autenticación y el usuario está autenticado lo redirigimos al home
   else next() // Si no , lo dejamos pasar
 })
 
