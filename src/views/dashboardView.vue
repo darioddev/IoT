@@ -146,8 +146,11 @@ const addDevice = async (datos) => {
 
 const deleteSpace = async (idSpace) => {
     try {
-        if (confirm(`¿Estás seguro de eliminar el espacio ${spaces.find(space => space.id === idSpace).name}?`))
+        if (confirm(`¿Estás seguro de eliminar el espacio ${spaces.find(space => space.id === idSpace).name}?`)) {
             await espacios.deleteDocument(id.value, idSpace); // Elimino el espacio del documento del usuario
+            getDevicesAndSensors(idSpace) // Obtengo los dispositivos y sensores del espacio
+            .map(device => devices.deleteDevice(id.value, device.id)) // Elimino los dispositivos y sensores del espacio
+        }
     } catch (error) {
         console.error(error) // Si hay un error lo muestro por consola
     }
@@ -167,6 +170,7 @@ const deleteDevice = async (idSpace, idDevice) => {
 
 const showInformationDevice = (idDevice, type) => {
     const devices = devicesAndSensors.find(device => device.id === idDevice && device.type === type) // Busco el sensor en el array de sensores en base al id
+
     if (type === 'sensor')
         newSpaceSensors.value = { ...devices }; // Asigno los valores del sensor a la variable reactiva
     if (type === 'executor')
@@ -175,7 +179,7 @@ const showInformationDevice = (idDevice, type) => {
 };
 
 const showInfomartionName = (idSpace) => {
-    newSpaceName.value = spaces.find(space => space.id === idSpace).name; // Asigno el nombre del espacio a la variable reactiva
+    newSpaceName.value = spaces.find(space => space.id === idSpace).name.trim(); // Asigno el nombre del espacio a la variable reactiva
     OpenModal('name', idSpace); // Abro el modal de editar espacio
 }
 
@@ -200,7 +204,7 @@ const updateDevice = async (data, type) => {
         devices.updateDevice(
             id.value, // Id del usuario
             uid, // Id del dispositivo
-            { ...rest } // Datos del dispositivo
+            { ...rest } // Datos del dispositivo , sin el id
         )
         closeModal(); // Cierro el modal
     } catch (error) {
@@ -557,7 +561,6 @@ onBeforeMount(async () => {
                             <span class="sr-only">Close modal</span>
                         </button>
                     </div>
-                    <!-- Input con el nombre -->
                     <form class="p-4 md:p-5" @submit.prevent="updateNameSpace">
                         <div class="grid gap-4 mb-4 grid-cols-2">
                             <div class="col-span-2">
@@ -592,6 +595,7 @@ onBeforeMount(async () => {
                                         class="text-red-500">*</span></label>
                                 <input type="text" name="name" id="name"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 "
+                                    
                                     placeholder="Nombre del espacio" v-model="newSpaceName">
                             </div>
                         </div>

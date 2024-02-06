@@ -14,7 +14,6 @@ export const espacios = {
   async createDocument(uid) {
     try {
       await saveDataWithId(this.name, uid, {}) // Guardamos el documento en la colección de espacios con el id del usuario
-    
     } catch (error) {
       console.log(error)
       throw new Error(error)
