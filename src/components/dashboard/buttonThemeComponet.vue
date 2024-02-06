@@ -18,7 +18,7 @@ onMounted(() => {
 
 <template>
     <!-- Botón para cambiar el tema -->
-    <button class="fixed top-4 right-4 p-2 rounded-full" @click="toggleTheme">
+    <button class="fixed top-4 right-4 p-2 rounded-full" title="Cambiar tema" @click="toggleTheme">
         <svg v-if="isDarkMode" class="w-6 h-6 text-yellow-300" fill="currentColor" viewBox="0 0 24 24">
             <!-- Ícono de luna para el modo oscuro -->
             <path

@@ -22,8 +22,11 @@ const units = reactive([]) // Variable para las unidades de medida que obtengo d
 const executors = reactive([]) // Variable para los ejecutores que obtengo de la base de datos
 const showDetails = ref([]); // Variable reactiva para mostrar los detalles del espacio
 
+//Foco del input 
+
 // Devuelve los sensores y ejecutores de un espacio en base al id del espacio y el tipo de entidad
 const getDevicesAndSensors = (id) => devicesAndSensors.filter(device => device.idSpace === id)
+
 
 const newSpaceName = ref(''); // Variable reactiva para el nombre del nuevo espacio 
 const createSpaceWithoutDevices = ref(false); //Toogle que permite crear un espacio sin sensores ni ejecutores
@@ -51,7 +54,8 @@ const isOpenModals = ref({  // Variable reactiva para mostrar el modal
     loading: { // Variable reactiva para mostrar el loader en los modales 
         load: false,
         message: 'Cargando...'
-    }
+    },
+
 });
 
 const resetModal = () => {
@@ -149,7 +153,7 @@ const deleteSpace = async (idSpace) => {
         if (confirm(`¿Estás seguro de eliminar el espacio ${spaces.find(space => space.id === idSpace).name}?`)) {
             await espacios.deleteDocument(id.value, idSpace); // Elimino el espacio del documento del usuario
             getDevicesAndSensors(idSpace) // Obtengo los dispositivos y sensores del espacio
-            .map(device => devices.deleteDevice(id.value, device.id)) // Elimino los dispositivos y sensores del espacio
+                .map(device => devices.deleteDevice(id.value, device.id)) // Elimino los dispositivos y sensores del espacio
         }
     } catch (error) {
         console.error(error) // Si hay un error lo muestro por consola
@@ -255,6 +259,11 @@ const logout = async () => {
     }
 };
 
+const redirect = (idDevice = "") => {
+    window.open(`${import.meta.env.VITE_APP_URL_IOT_MANAGER}${id.value}/${idDevice}`)
+
+}
+
 
 getSubCollection(import.meta.env.VITE_APP_FIREBASE_COLLECTION_SPACE, id.value, import.meta.env.VITE_APP_FIREBASE_COLLLECTION_NAMES, (doc) => {
     spaces.splice(0, spaces.length);
@@ -297,10 +306,21 @@ onBeforeMount(async () => {
                 Bienvenido a <span class="text-blue-700">IoT</span>
             </div>
             <div class="flex items-center space-x-4 text-lg font-semibold tracking-tight">
+                <div class="bg-grenn-400">
+                    <button
+                        class="flex items-center px-4 py-2  transition duration-700 ease-out border border-black rounded-lg bg-blue-700 text-white hover:bg-blue-800 hover:ease-in hover:underline"
+                        type="button" title="Añadir un nuevo espacio" @click="redirect(id.value)">
+                        <!-- Icono de estrell con boxicons -->
+                        <i class='bx bx-star
+                    bx p-'></i>
+
+                        IoTManager
+                    </button>
+                </div>
                 <div>
                     <button
                         class="flex items-center px-6 py-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                        type="button" @click="OpenModal('addSpace')">
+                        type="button" title="Añadir un nuevo espacio" @click="OpenModal('addSpace')">
                         <svg class="w-6 h-6 text-black mx-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="{2}"
@@ -312,7 +332,7 @@ onBeforeMount(async () => {
 
                 <button
                     class="flex items-center px-6 py-2 mx-2 text-black transition duration-700 ease-out bg-white border border-black rounded-lg hover:bg-black hover:border hover:text-white"
-                    type="button" @click="logout">
+                    type="button" title="Cerrar sesión" @click="logout">
                     <!-- Icono de cerrar sesión-->
                     <svg class="w-6 h-6 text-black mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg">
@@ -423,6 +443,12 @@ onBeforeMount(async () => {
                                                         type="button" @click="deleteDevice(space.id, device.id)">
                                                         <i class='bx bxs-trash'></i>
                                                     </button>
+                                                    <button
+                                                        class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-green-600 rounded-lg hover:bg-green-800 hover:ease-in hover:underline"
+                                                        type="button" title="Redireccion device"
+                                                        @click="redirect(device.id)">
+                                                        <i class='bx bx-link-alt bx-s'></i>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -459,13 +485,21 @@ onBeforeMount(async () => {
                                                 <div class="flex flex-row item-center justify-end mr-20">
                                                     <button
                                                         class="flex items-center px-6 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                                        type="button" @click="showInformationDevice(device.id, 'executor')">
+                                                        type="button" title="Modificar nombre del dispositivo"
+                                                        @click="showInformationDevice(device.id, 'executor')">
                                                         <i class='bx bxs-rename'></i>
                                                     </button>
                                                     <button
                                                         class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
-                                                        type="button" @click="deleteDevice(space.id, device.id)">
+                                                        type="button" title="Eliminar dispositivo"
+                                                        @click="deleteDevice(space.id, device.id)">
                                                         <i class='bx bxs-trash'></i>
+                                                    </button>
+                                                    <button
+                                                        class="flex items-center px-3 py-2 mx-2 text-white transition duration-500 ease-out bg-green-600 rounded-lg hover:bg-green-800 hover:ease-in hover:underline"
+                                                        type="button" title="Redireccion device"
+                                                        @click="redirect(device.id)">
+                                                        <i class='bx bx-link-alt bx-s'></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -485,25 +519,28 @@ onBeforeMount(async () => {
                                 <div class="flex flex-row bg-blue-700 rounded-b-lg p-3">
                                     <button
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                        type="button" @click="OpenModal('sensor', space.id)" :id="id">
+                                        type="button" title="Añadir un nuevo sensor" @click="OpenModal('sensor', space.id)"
+                                        :id="id">
                                         <i class='bx bx-radar bx-sm'></i>
                                         <span class="hidden md:block">Añadir un nuevo sensor</span>
                                     </button>
                                     <button
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                        type="button" @click="OpenModal('executor', space.id)">
+                                        type="button" title="Añadir un nuevo ejecutor"
+                                        @click="OpenModal('executor', space.id)">
                                         <i class='bx bx-devices bx-sm'></i>
                                         <span class="hidden md:block">Añadir un nuevo ejecutor</span>
                                     </button>
                                     <button
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-blue-700 rounded-lg hover:bg-blue-800 hover:ease-in hover:underline"
-                                        type="button" @click="showInfomartionName(space.id)">
+                                        type="button" title="Renombrar espacio del nombre"
+                                        @click="showInfomartionName(space.id)">
                                         <i class='bx bxs-rename'></i>
                                         <span class="hidden md:block">Renombrar</span>
                                     </button>
                                     <button
                                         class="flex items-center px-4 py-2 mx-2 text-white transition duration-500 ease-out bg-red-700 rounded-lg hover:bg-red-800 hover:ease-in hover:underline"
-                                        type="button" @click="deleteSpace(space.id)">
+                                        type="button" title="Eliminar espacio" @click="deleteSpace(space.id)">
                                         <i class='bx bxs-trash text-lg mr-1'></i>
                                         <span class="hidden md:block">Eliminar espacio</span>
                                     </button>
@@ -595,7 +632,6 @@ onBeforeMount(async () => {
                                         class="text-red-500">*</span></label>
                                 <input type="text" name="name" id="name"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 "
-                                    
                                     placeholder="Nombre del espacio" v-model="newSpaceName">
                             </div>
                         </div>
